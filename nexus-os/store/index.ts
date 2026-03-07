@@ -5,6 +5,30 @@ import { Project, Task, TaskStatus, Priority } from '@/types'
 const uid = () => Math.random().toString(36).slice(2, 10)
 const now = () => new Date().toISOString()
 
+// localStorage はブラウザのみ。SSR 時は使わない（Vercel デプロイで client-side exception を防ぐ）
+const safeStorage = {
+  getItem: (name: string) => {
+    if (typeof window === 'undefined') return null
+    try {
+      return localStorage.getItem(name)
+    } catch {
+      return null
+    }
+  },
+  setItem: (name: string, value: string) => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem(name, value)
+    } catch {}
+  },
+  removeItem: (name: string) => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.removeItem(name)
+    } catch {}
+  },
+}
+
 interface ProjectState {
   projects: Project[]
   addProject: (p: Omit<Project, 'id' | 'milestones' | 'status' | 'lastTouched'>) => void
@@ -73,7 +97,7 @@ export const useProjectStore = create<ProjectState>()(
           projects: s.projects.map((p) => (p.id === id ? { ...p, lastTouched: now() } : p)),
         })),
     }),
-    { name: 'nexus-projects' }
+    { name: 'nexus-projects', storage: safeStorage as never }
   )
 )
 
@@ -104,6 +128,6 @@ export const useTaskStore = create<TaskState>()(
       deleteTask: (id) =>
         set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
     }),
-    { name: 'nexus-tasks' }
+    { name: 'nexus-tasks', storage: safeStorage as never }
   )
 )
