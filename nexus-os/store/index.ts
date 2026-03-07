@@ -12,7 +12,7 @@ const defaultProjects: Project[] = [
     deadline: '2025-12-31',
     color: '#00ffff',
     status: 'active',
-    lastTouched: now(),
+    lastTouched: '2025-03-07T00:00:00.000Z',
     milestones: [
       { id: 'm1', projectId: 'p1', label: 'MVP設計完了', targetDate: '2025-03-31', span: 'quarterly', completed: true },
       { id: 'm2', projectId: 'p1', label: 'β版開発完了', targetDate: '2025-06-30', span: 'quarterly', completed: false },
@@ -39,7 +39,7 @@ const defaultProjects: Project[] = [
     deadline: '2025-12-31',
     color: '#ff3c3c',
     status: 'active',
-    lastTouched: now(),
+    lastTouched: '2025-03-07T00:00:00.000Z',
     milestones: [
       { id: 'm6', projectId: 'p3', label: 'Q1: ¥10M', targetDate: '2025-03-31', span: 'quarterly', completed: false },
       { id: 'm7', projectId: 'p3', label: 'Q2: ¥25M累計', targetDate: '2025-06-30', span: 'quarterly', completed: false },
@@ -48,11 +48,11 @@ const defaultProjects: Project[] = [
 ]
 
 const defaultTasks: Task[] = [
-  { id: 't1', title: 'LPのコピーライティング修正', projectId: 'p1', priority: 'high', status: 'todo', createdAt: now() },
-  { id: 't2', title: 'APIエンドポイント設計書作成', projectId: 'p1', priority: 'critical', status: 'in_progress', createdAt: now() },
-  { id: 't3', title: '求人媒体の選定', projectId: 'p2', priority: 'medium', status: 'backlog', createdAt: now() },
-  { id: 't4', title: '既存顧客へのアップセル提案', projectId: 'p3', priority: 'high', status: 'todo', createdAt: now() },
-  { id: 't5', title: '競合サービス調査レポート', projectId: null, priority: 'low', status: 'backlog', createdAt: now() },
+  { id: 't1', title: 'LPのコピーライティング修正', projectId: 'p1', priority: 'high', status: 'todo', createdAt: '2025-03-07T00:00:00.000Z' },
+  { id: 't2', title: 'APIエンドポイント設計書作成', projectId: 'p1', priority: 'critical', status: 'in_progress', createdAt: '2025-03-07T00:00:00.000Z' },
+  { id: 't3', title: '求人媒体の選定', projectId: 'p2', priority: 'medium', status: 'backlog', createdAt: '2025-03-07T00:00:00.000Z' },
+  { id: 't4', title: '既存顧客へのアップセル提案', projectId: 'p3', priority: 'high', status: 'todo', createdAt: '2025-03-07T00:00:00.000Z' },
+  { id: 't5', title: '競合サービス調査レポート', projectId: null, priority: 'low', status: 'backlog', createdAt: '2025-03-07T00:00:00.000Z' },
 ]
 
 interface ProjectState {
