@@ -31,27 +31,27 @@ export default function TaskCard({ task }: { task: Task }) {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <span style={{
-          fontSize: 12, color: 'var(--text-bright)', fontFamily: 'var(--font-mono)',
+          fontSize: 13, color: 'var(--text-bright)', fontFamily: 'var(--font-mono)',
           lineHeight: 1.5, flex: 1,
         }}>
           {task.title}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
           <span style={{
-            fontSize: 9, fontFamily: 'var(--font-display)', letterSpacing: '0.08em',
+            fontSize: 10, fontFamily: 'var(--font-display)', letterSpacing: '0.08em',
             color, border: `1px solid ${color}55`, padding: '2px 7px',
           }}>
             {task.priority.toUpperCase()}
           </span>
           {confirmDelete ? (
             <>
-              <button onClick={() => deleteTask(task.id)} style={{ fontSize: 8, padding: '2px 6px', background: 'rgba(255,68,68,0.15)', border: '1px solid var(--accent-alert)', color: 'var(--accent-alert)', cursor: 'pointer', fontFamily: 'var(--font-display)' }}>DEL</button>
-              <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 8, padding: '2px 5px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => deleteTask(task.id)} style={{ fontSize: 10, padding: '2px 7px', background: 'rgba(255,68,68,0.15)', border: '1px solid var(--accent-alert)', color: 'var(--accent-alert)', cursor: 'pointer', fontFamily: 'var(--font-display)' }}>DEL</button>
+              <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 10, padding: '2px 6px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
             </>
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              style={{ fontSize: 10, padding: '0 3px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              style={{ fontSize: 13, padding: '0 3px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-alert)' }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
             >×</button>
@@ -61,9 +61,9 @@ export default function TaskCard({ task }: { task: Task }) {
       {project && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 7 }}>
           <span style={{
-            width: 6, height: 6, borderRadius: '50%', background: project.color, display: 'inline-block', flexShrink: 0,
+            width: 7, height: 7, borderRadius: '50%', background: project.color, display: 'inline-block', flexShrink: 0,
           }} />
-          <span style={{ fontSize: 10, color: 'var(--text-mid)' }}>{project.name}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-mid)' }}>{project.name}</span>
         </div>
       )}
       <div style={{ marginTop: 10, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -72,7 +72,7 @@ export default function TaskCard({ task }: { task: Task }) {
             key={status}
             onClick={() => moveTask(task.id, status)}
             style={{
-              fontSize: 9, fontFamily: 'var(--font-display)', padding: '3px 8px', cursor: 'pointer',
+              fontSize: 10, fontFamily: 'var(--font-display)', padding: '4px 9px', cursor: 'pointer',
               background: task.status === status ? 'rgba(0,229,255,0.12)' : 'transparent',
               border: `1px solid ${task.status === status ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
               color: task.status === status ? 'var(--accent-cyan)' : 'var(--text-mid)',

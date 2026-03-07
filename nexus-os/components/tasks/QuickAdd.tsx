@@ -34,11 +34,11 @@ export default function QuickAdd() {
       <button
         onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 50) }}
         style={{
-          width: '100%', padding: '11px 16px',
+          width: '100%', padding: '12px 16px',
           background: 'transparent',
           border: '1px dashed var(--border-dim)',
           color: 'var(--text-mid)',
-          fontFamily: 'var(--font-mono)', fontSize: 12,
+          fontFamily: 'var(--font-mono)', fontSize: 13,
           cursor: 'pointer', textAlign: 'left', letterSpacing: '0.05em',
           transition: 'all 0.2s',
         }}
@@ -53,7 +53,7 @@ export default function QuickAdd() {
           el.style.color = 'var(--text-mid)'
         }}
       >
-        + タスクを追加  <span style={{ opacity: 0.5, fontSize: 10 }}>[Enter]</span>
+        + タスクを追加  <span style={{ opacity: 0.5, fontSize: 11 }}>[Enter]</span>
       </button>
     )
   }
@@ -73,7 +73,7 @@ export default function QuickAdd() {
           width: '100%', background: 'transparent', border: 'none',
           borderBottom: '1px solid var(--border-dim)',
           color: 'var(--text-bright)', fontFamily: 'var(--font-mono)',
-          fontSize: 13, padding: '4px 0 10px', marginBottom: 12, outline: 'none',
+          fontSize: 14, padding: '4px 0 10px', marginBottom: 12, outline: 'none',
         }}
       />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -83,7 +83,7 @@ export default function QuickAdd() {
           style={{
             background: 'var(--bg-void)', border: '1px solid var(--border-dim)',
             color: 'var(--text-bright)', fontFamily: 'var(--font-mono)',
-            fontSize: 11, padding: '5px 10px', cursor: 'pointer',
+            fontSize: 12, padding: '6px 10px', cursor: 'pointer',
           }}
         >
           <option value="null">INBOX</option>
@@ -97,8 +97,8 @@ export default function QuickAdd() {
             key={p}
             onClick={() => setPriority(p)}
             style={{
-              fontSize: 9, fontFamily: 'var(--font-display)',
-              padding: '5px 10px', cursor: 'pointer',
+              fontSize: 11, fontFamily: 'var(--font-display)',
+              padding: '6px 11px', cursor: 'pointer',
               background: priority === p ? 'rgba(0,229,255,0.1)' : 'transparent',
               border: `1px solid ${priority === p ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
               color: priority === p ? 'var(--accent-cyan)' : 'var(--text-mid)',
@@ -112,9 +112,9 @@ export default function QuickAdd() {
         <button
           onClick={handleSubmit}
           style={{
-            marginLeft: 'auto', fontSize: 10,
+            marginLeft: 'auto', fontSize: 12,
             fontFamily: 'var(--font-display)',
-            padding: '5px 16px', cursor: 'pointer',
+            padding: '6px 18px', cursor: 'pointer',
             background: 'rgba(0,229,255,0.12)',
             border: '1px solid var(--accent-cyan)',
             color: 'var(--accent-cyan)', letterSpacing: '0.1em',

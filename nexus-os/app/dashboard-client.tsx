@@ -21,8 +21,8 @@ function Clock() {
   }, [])
   return (
     <div style={{ textAlign: 'right' }}>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: 'var(--accent-cyan)', letterSpacing: '0.1em', textShadow: 'var(--glow-cyan)', lineHeight: 1 }}>{time}</div>
-      <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: 2 }}>{date}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: 'var(--accent-cyan)', letterSpacing: '0.1em', textShadow: 'var(--glow-cyan)', lineHeight: 1 }}>{time}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: 2 }}>{date}</div>
     </div>
   )
 }
@@ -57,7 +57,7 @@ function AddProjectForm({ onClose }: { onClose: () => void }) {
     width: '100%', background: 'var(--bg-void)',
     border: '1px solid var(--border-dim)', borderRadius: 0,
     color: 'var(--text-bright)', fontFamily: 'var(--font-mono)',
-    fontSize: 11, padding: '6px 8px', outline: 'none',
+    fontSize: 13, padding: '7px 10px', outline: 'none',
   }
 
   return (
@@ -66,7 +66,7 @@ function AddProjectForm({ onClose }: { onClose: () => void }) {
       style={{ padding: '14px', marginTop: 12, background: 'rgba(0,229,255,0.04)', borderColor: 'var(--accent-cyan)' }}
       onKeyDown={handleKey}
     >
-      <div style={{ fontSize: 9, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)', letterSpacing: '0.15em', marginBottom: 10 }}>
+      <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)', letterSpacing: '0.15em', marginBottom: 10 }}>
         NEW PROJECT
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -94,7 +94,7 @@ function AddProjectForm({ onClose }: { onClose: () => void }) {
             type="color"
             value={color}
             onChange={(e) => setColor(e.target.value)}
-            style={{ width: 32, height: 30, padding: 2, background: 'var(--bg-void)', border: '1px solid var(--border-dim)', cursor: 'pointer' }}
+            style={{ width: 32, height: 34, padding: 2, background: 'var(--bg-void)', border: '1px solid var(--border-dim)', cursor: 'pointer' }}
           />
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -102,7 +102,7 @@ function AddProjectForm({ onClose }: { onClose: () => void }) {
             onClick={handleSubmit}
             disabled={!name.trim() || !deadline}
             style={{
-              flex: 1, padding: '6px', fontSize: 10, fontFamily: 'var(--font-display)',
+              flex: 1, padding: '7px', fontSize: 11, fontFamily: 'var(--font-display)',
               background: name.trim() && deadline ? 'rgba(0,229,255,0.12)' : 'transparent',
               border: `1px solid ${name.trim() && deadline ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
               color: name.trim() && deadline ? 'var(--accent-cyan)' : 'var(--text-muted)',
@@ -115,7 +115,7 @@ function AddProjectForm({ onClose }: { onClose: () => void }) {
           <button
             onClick={onClose}
             style={{
-              padding: '6px 12px', fontSize: 10, fontFamily: 'var(--font-display)',
+              padding: '7px 14px', fontSize: 11, fontFamily: 'var(--font-display)',
               background: 'transparent', border: '1px solid var(--border-dim)',
               color: 'var(--text-muted)', cursor: 'pointer', letterSpacing: '0.1em',
             }}
@@ -143,10 +143,10 @@ function DashboardContent() {
       <header style={{ borderBottom: '1px solid var(--border-dim)', padding: '14px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'var(--bg-void)', zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 28, height: 28, border: '1px solid var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--glow-cyan)' }}>
-              <div style={{ width: 10, height: 10, background: 'var(--accent-cyan)', boxShadow: 'var(--glow-cyan)' }} />
+            <div style={{ width: 30, height: 30, border: '1px solid var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--glow-cyan)' }}>
+              <div style={{ width: 11, height: 11, background: 'var(--accent-cyan)', boxShadow: 'var(--glow-cyan)' }} />
             </div>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 900, color: 'var(--accent-cyan)', letterSpacing: '0.2em', textShadow: 'var(--glow-cyan)' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 900, color: 'var(--accent-cyan)', letterSpacing: '0.2em', textShadow: 'var(--glow-cyan)' }}>
               NEXUS<span style={{ color: 'var(--text-mid)', fontWeight: 400 }}>::OS</span>
             </span>
           </div>
@@ -154,14 +154,14 @@ function DashboardContent() {
             {[{ label: 'KANBAN', href: '/' }, { label: 'FLOW BOARD', href: '/timeline' }].map(({ label, href }) => {
               const active = label === 'KANBAN'
               return (
-                <Link key={label} href={href} style={{ textDecoration: 'none', fontSize: 9, fontFamily: 'var(--font-display)', padding: '5px 14px', letterSpacing: '0.12em', background: active ? 'rgba(0,229,255,0.1)' : 'transparent', border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`, color: active ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>
+                <Link key={label} href={href} style={{ textDecoration: 'none', fontSize: 11, fontFamily: 'var(--font-display)', padding: '5px 16px', letterSpacing: '0.12em', background: active ? 'rgba(0,229,255,0.1)' : 'transparent', border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`, color: active ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>
                   {label}
                 </Link>
               )
             })}
           </div>
           {stalledCount > 0 && (
-            <div style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--accent-alert)', border: '1px solid rgba(255,68,68,0.4)', background: 'rgba(255,68,68,0.08)', padding: '4px 12px', letterSpacing: '0.1em' }}>
+            <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--accent-alert)', border: '1px solid rgba(255,68,68,0.4)', background: 'rgba(255,68,68,0.08)', padding: '4px 12px', letterSpacing: '0.1em' }}>
               ⚠ {stalledCount} PROJECT{stalledCount > 1 ? 'S' : ''} IDLE
             </div>
           )}
@@ -173,25 +173,25 @@ function DashboardContent() {
               { label: 'ACTIVE', value: projects.filter((p) => p.status === 'active').length },
             ].map((s) => (
               <div key={s.label} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 20, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)', fontWeight: 700 }}>{s.value}</div>
-                <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.12em' }}>{s.label}</div>
+                <div style={{ fontSize: 24, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)', fontWeight: 700 }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.12em' }}>{s.label}</div>
               </div>
             ))}
           </div>
           <Clock />
         </div>
       </header>
-      <main style={{ flex: 1, display: 'grid', gridTemplateColumns: '290px 1fr', overflow: 'hidden', height: 'calc(100vh - 69px)' }}>
+      <main style={{ flex: 1, display: 'grid', gridTemplateColumns: '310px 1fr', overflow: 'hidden', height: 'calc(100vh - 73px)' }}>
         <aside style={{ borderRight: '1px solid var(--border-dim)', padding: '20px 16px', overflowY: 'auto', background: 'var(--bg-panel)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 12, height: 1, background: 'var(--accent-cyan)', display: 'inline-block' }} />
               PROJECT COMPASS
             </div>
             <button
               onClick={() => setAddingProject((v) => !v)}
               style={{
-                fontSize: 9, fontFamily: 'var(--font-display)', padding: '3px 10px',
+                fontSize: 11, fontFamily: 'var(--font-display)', padding: '4px 12px',
                 background: addingProject ? 'rgba(0,229,255,0.12)' : 'transparent',
                 border: `1px solid ${addingProject ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
                 color: addingProject ? 'var(--accent-cyan)' : 'var(--text-mid)',
@@ -217,16 +217,16 @@ function DashboardContent() {
             if (!p?.milestones.length) return null
             return (
               <div style={{ marginTop: 20 }}>
-                <div style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ width: 12, height: 1, background: p.color, display: 'inline-block' }} />
                   MILESTONES
                 </div>
                 {p.milestones.map((m) => (
                   <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12, opacity: m.completed ? 0.45 : 1 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 2, background: m.completed ? p.color : 'transparent', border: `1px solid ${p.color}`, boxShadow: m.completed ? `0 0 6px ${p.color}` : 'none' }} />
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 3, background: m.completed ? p.color : 'transparent', border: `1px solid ${p.color}`, boxShadow: m.completed ? `0 0 6px ${p.color}` : 'none' }} />
                     <div>
-                      <div style={{ fontSize: 11, color: m.completed ? 'var(--text-muted)' : 'var(--text-bright)', lineHeight: 1.4 }}>{m.completed && <span style={{ marginRight: 4 }}>✓</span>}{m.label}</div>
-                      <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{new Date(m.targetDate).toLocaleDateString('ja-JP')}</div>
+                      <div style={{ fontSize: 13, color: m.completed ? 'var(--text-muted)' : 'var(--text-bright)', lineHeight: 1.4 }}>{m.completed && <span style={{ marginRight: 4 }}>✓</span>}{m.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{new Date(m.targetDate).toLocaleDateString('ja-JP')}</div>
                     </div>
                   </div>
                 ))}
@@ -235,7 +235,7 @@ function DashboardContent() {
           })()}
         </aside>
         <section style={{ padding: '20px 24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 12, height: 1, background: 'var(--accent-cyan)', display: 'inline-block' }} />
             TASK MATRIX
           </div>

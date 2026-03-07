@@ -29,7 +29,7 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
       {/* View switcher */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{
-          fontSize: 9, color: 'var(--text-muted)',
+          fontSize: 11, color: 'var(--text-muted)',
           fontFamily: 'var(--font-display)', marginRight: 6, letterSpacing: '0.1em',
         }}>
           VIEW /
@@ -38,8 +38,8 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
         <button
           onClick={() => setView('all')}
           style={{
-            fontSize: 9, fontFamily: 'var(--font-display)',
-            padding: '4px 12px', cursor: 'pointer', letterSpacing: '0.1em',
+            fontSize: 11, fontFamily: 'var(--font-display)',
+            padding: '5px 14px', cursor: 'pointer', letterSpacing: '0.1em',
             background: view === 'all' ? 'rgba(0,255,255,0.08)' : 'transparent',
             border: `1px solid ${view === 'all' ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
             color: view === 'all' ? 'var(--accent-cyan)' : 'var(--text-muted)',
@@ -55,8 +55,8 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
             key={p.id}
             onClick={() => setView(p.id)}
             style={{
-              fontSize: 9, fontFamily: 'var(--font-display)',
-              padding: '4px 10px', cursor: 'pointer', letterSpacing: '0.08em',
+              fontSize: 11, fontFamily: 'var(--font-display)',
+              padding: '5px 12px', cursor: 'pointer', letterSpacing: '0.08em',
               background: view === p.id ? `${p.color}15` : 'transparent',
               border: `1px solid ${view === p.id ? p.color : 'var(--border-dim)'}`,
               color: view === p.id ? p.color : 'var(--text-muted)',
@@ -65,7 +65,7 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
             }}
           >
             <span style={{
-              width: 5, height: 5, borderRadius: '50%',
+              width: 6, height: 6, borderRadius: '50%',
               background: p.color, display: 'inline-block',
             }} />
             {p.name}
@@ -91,14 +91,14 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
                 borderBottom: `1px solid ${col.key === 'in_progress' ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
               }}>
                 <span style={{
-                  fontSize: 9, fontFamily: 'var(--font-display)', letterSpacing: '0.12em',
+                  fontSize: 11, fontFamily: 'var(--font-display)', letterSpacing: '0.12em',
                   color: col.key === 'in_progress' ? 'var(--accent-cyan)' : 'var(--text-muted)',
                 }}>
                   {col.label}
                 </span>
                 <span style={{
-                  fontSize: 9, color: 'var(--text-muted)',
-                  background: 'var(--bg-card)', padding: '1px 6px',
+                  fontSize: 11, color: 'var(--text-muted)',
+                  background: 'var(--bg-card)', padding: '1px 7px',
                   border: '1px solid var(--border-dim)',
                 }}>
                   {colTasks.length}

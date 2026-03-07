@@ -63,12 +63,12 @@ export default function ProjectCard({ project, isSelected, onClick }: Props) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
           <span style={{
-            width: 8, height: 8, borderRadius: '50%',
+            width: 9, height: 9, borderRadius: '50%',
             background: color, boxShadow: `0 0 8px ${color}`,
             display: 'inline-block', flexShrink: 0,
           }} />
           <span style={{
-            fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700,
+            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
             color: isSelected ? color : 'var(--text-bright)', letterSpacing: '0.08em',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
@@ -78,7 +78,7 @@ export default function ProjectCard({ project, isSelected, onClick }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {stalled >= 5 && !confirmDelete && (
             <span style={{
-              fontSize: 9, fontFamily: 'var(--font-display)',
+              fontSize: 10, fontFamily: 'var(--font-display)',
               color: 'var(--accent-alert)',
               background: 'rgba(255,68,68,0.1)',
               border: '1px solid rgba(255,68,68,0.3)',
@@ -92,7 +92,7 @@ export default function ProjectCard({ project, isSelected, onClick }: Props) {
               <button
                 onClick={handleDelete}
                 style={{
-                  fontSize: 9, fontFamily: 'var(--font-display)', padding: '2px 8px',
+                  fontSize: 10, fontFamily: 'var(--font-display)', padding: '3px 9px',
                   background: 'rgba(255,68,68,0.15)', border: '1px solid var(--accent-alert)',
                   color: 'var(--accent-alert)', cursor: 'pointer', letterSpacing: '0.05em',
                 }}
@@ -102,7 +102,7 @@ export default function ProjectCard({ project, isSelected, onClick }: Props) {
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirmDelete(false) }}
                 style={{
-                  fontSize: 9, fontFamily: 'var(--font-display)', padding: '2px 8px',
+                  fontSize: 10, fontFamily: 'var(--font-display)', padding: '3px 9px',
                   background: 'transparent', border: '1px solid var(--border-dim)',
                   color: 'var(--text-mid)', cursor: 'pointer',
                 }}
@@ -114,7 +114,7 @@ export default function ProjectCard({ project, isSelected, onClick }: Props) {
             <button
               onClick={handleDelete}
               style={{
-                fontSize: 10, padding: '1px 6px',
+                fontSize: 12, padding: '1px 6px',
                 background: 'transparent', border: '1px solid transparent',
                 color: 'var(--text-muted)', cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -136,14 +136,14 @@ export default function ProjectCard({ project, isSelected, onClick }: Props) {
         </div>
       </div>
 
-      <p style={{ fontSize: 10, color: 'var(--text-mid)', marginBottom: 10, lineHeight: 1.5, paddingLeft: 16 }}>
+      <p style={{ fontSize: 12, color: 'var(--text-mid)', marginBottom: 10, lineHeight: 1.5, paddingLeft: 17 }}>
         {project.goal}
       </p>
 
       <div style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>MILESTONE</span>
-          <span style={{ fontSize: 9, color: color }}>{progress}%</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>MILESTONE</span>
+          <span style={{ fontSize: 10, color: color }}>{progress}%</span>
         </div>
         <div style={{ height: 2, background: 'var(--border-dim)', borderRadius: 1 }}>
           <div style={{
@@ -154,8 +154,8 @@ export default function ProjectCard({ project, isSelected, onClick }: Props) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>TASK {doneTasks}/{tasks.length}</span>
-        <span style={{ fontSize: 9, color: remaining < 60 ? 'var(--accent-alert)' : 'var(--text-muted)' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>TASK {doneTasks}/{tasks.length}</span>
+        <span style={{ fontSize: 11, color: remaining < 60 ? 'var(--accent-alert)' : 'var(--text-muted)' }}>
           {remaining > 0 ? `残${remaining}D` : 'OVERDUE'}
         </span>
       </div>
@@ -164,7 +164,7 @@ export default function ProjectCard({ project, isSelected, onClick }: Props) {
         <div style={{
           marginTop: 10, paddingTop: 8,
           borderTop: '1px solid var(--border-dim)',
-          fontSize: 9, color: 'var(--text-muted)',
+          fontSize: 11, color: 'var(--text-muted)',
         }}>
           <span style={{ color: color, marginRight: 6 }}>▶</span>
           {nextMilestone.label}
