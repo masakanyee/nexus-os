@@ -15,6 +15,7 @@ export default function ClientOnlyDashboard({
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     try {
       if (typeof useProjectStore.persist?.rehydrate === 'function') {
         useProjectStore.persist.rehydrate()
@@ -25,7 +26,14 @@ export default function ClientOnlyDashboard({
     } catch (e) {
       console.error('[StoreHydration]', e)
     }
-    setMounted(true)
+    // 次のティックで setState して、rehydrate による更新と重ならないようにする（React #185 無限更新を防ぐ）
+    const id = setTimeout(() => {
+      if (!cancelled) setMounted(true)
+    }, 0)
+    return () => {
+      cancelled = true
+      clearTimeout(id)
+    }
   }, [])
 
   if (!mounted) {
