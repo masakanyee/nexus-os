@@ -13,7 +13,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body style={{ margin: 0, minHeight: '100vh', background: '#020408', color: '#c8f0f8' }}>
+        {children}
+      </body>
     </html>
   );
 }
