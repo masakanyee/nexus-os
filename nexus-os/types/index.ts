@@ -9,6 +9,8 @@ export interface Milestone {
   targetDate: string
   span: MilestoneSpan
   completed: boolean
+  notes?: string
+  connections?: string[]  // 接続先マイルストーンIDの配列
 }
 
 export interface Project {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { useProjectStore, useTaskStore, loadStoredState, saveStoredState } from '@/store'
 import ProjectCard from '@/components/compass/ProjectCard'
 import TaskBoard from '@/components/tasks/TaskBoard'
@@ -148,6 +149,16 @@ function DashboardContent() {
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 900, color: 'var(--accent-cyan)', letterSpacing: '0.2em', textShadow: 'var(--glow-cyan)' }}>
               NEXUS<span style={{ color: 'var(--text-mid)', fontWeight: 400 }}>::OS</span>
             </span>
+          </div>
+          <div style={{ display: 'flex', gap: 1 }}>
+            {[{ label: 'KANBAN', href: '/' }, { label: 'TIMELINE', href: '/timeline' }].map(({ label, href }) => {
+              const active = label === 'KANBAN'
+              return (
+                <Link key={label} href={href} style={{ textDecoration: 'none', fontSize: 9, fontFamily: 'var(--font-display)', padding: '5px 14px', letterSpacing: '0.12em', background: active ? 'rgba(0,229,255,0.1)' : 'transparent', border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`, color: active ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>
+                  {label}
+                </Link>
+              )
+            })}
           </div>
           {stalledCount > 0 && (
             <div style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--accent-alert)', border: '1px solid rgba(255,68,68,0.4)', background: 'rgba(255,68,68,0.08)', padding: '4px 12px', letterSpacing: '0.1em' }}>

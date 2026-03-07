@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Project, Task, TaskStatus, Priority } from '@/types'
+import { Project, Task, TaskStatus, Priority, Milestone } from '@/types'
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 const now = () => new Date().toISOString()
@@ -62,6 +62,9 @@ interface ProjectState {
   deleteProject: (id: string) => void
   touchProject: (id: string) => void
   setProjects: (projects: Project[]) => void
+  addMilestone: (projectId: string, m: Omit<Milestone, 'id' | 'projectId'>) => void
+  updateMilestone: (projectId: string, milestoneId: string, patch: Partial<Milestone>) => void
+  deleteMilestone: (projectId: string, milestoneId: string) => void
 }
 
 export const useProjectStore = create<ProjectState>()((set) => ({
@@ -80,6 +83,30 @@ export const useProjectStore = create<ProjectState>()((set) => ({
   touchProject: (id) =>
     set((s) => ({
       projects: s.projects.map((p) => (p.id === id ? { ...p, lastTouched: now() } : p)),
+    })),
+  addMilestone: (projectId, m) =>
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, milestones: [...p.milestones, { ...m, id: uid(), projectId }] }
+          : p
+      ),
+    })),
+  updateMilestone: (projectId, milestoneId, patch) =>
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, milestones: p.milestones.map((m) => (m.id === milestoneId ? { ...m, ...patch } : m)) }
+          : p
+      ),
+    })),
+  deleteMilestone: (projectId, milestoneId) =>
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, milestones: p.milestones.filter((m) => m.id !== milestoneId) }
+          : p
+      ),
     })),
 }))
 
