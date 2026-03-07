@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useProjectStore, useTaskStore } from '@/store'
+import { useProjectStore, useTaskStore, loadStoredState, saveStoredState } from '@/store'
 
 /**
- * クライアントマウント完了＋Zustand rehydrate 後にのみ子を描画する。
- * サーバーと初回クライアント描画は同じローディング表示にし、ハイドレーション不一致を防ぐ。
+ * クライアントマウント後に localStorage から1回だけ復元し、そのあと子を描画。
+ * persist ミドルウェアを使わないため React #185 の無限更新を防ぐ。
  */
 export default function ClientOnlyDashboard({
   children,
@@ -15,26 +15,21 @@ export default function ClientOnlyDashboard({
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    try {
-      if (typeof useProjectStore.persist?.rehydrate === 'function') {
-        useProjectStore.persist.rehydrate()
-      }
-      if (typeof useTaskStore.persist?.rehydrate === 'function') {
-        useTaskStore.persist.rehydrate()
-      }
-    } catch (e) {
-      console.error('[StoreHydration]', e)
-    }
-    // 次のティックで setState して、rehydrate による更新と重ならないようにする（React #185 無限更新を防ぐ）
-    const id = setTimeout(() => {
-      if (!cancelled) setMounted(true)
-    }, 0)
-    return () => {
-      cancelled = true
-      clearTimeout(id)
-    }
+    loadStoredState()
+    const id = setTimeout(() => setMounted(true), 0)
+    return () => clearTimeout(id)
   }, [])
+
+  // マウント後、ストアの変更を localStorage に保存（サブスクライブは state を更新しないのでループしない）
+  useEffect(() => {
+    if (!mounted) return
+    const unsubP = useProjectStore.subscribe(saveStoredState)
+    const unsubT = useTaskStore.subscribe(saveStoredState)
+    return () => {
+      unsubP()
+      unsubT()
+    }
+  }, [mounted])
 
   if (!mounted) {
     return (
