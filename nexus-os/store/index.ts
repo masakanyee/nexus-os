@@ -97,7 +97,7 @@ export const useProjectStore = create<ProjectState>()(
           projects: s.projects.map((p) => (p.id === id ? { ...p, lastTouched: now() } : p)),
         })),
     }),
-    { name: 'nexus-projects', storage: safeStorage as never }
+    { name: 'nexus-projects', storage: safeStorage as never, skipHydration: true }
   )
 )
 
@@ -128,6 +128,6 @@ export const useTaskStore = create<TaskState>()(
       deleteTask: (id) =>
         set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
     }),
-    { name: 'nexus-tasks', storage: safeStorage as never }
+    { name: 'nexus-tasks', storage: safeStorage as never, skipHydration: true }
   )
 )

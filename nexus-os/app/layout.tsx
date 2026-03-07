@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import StoreHydration from "@/components/StoreHydration";
 
 export const metadata: Metadata = {
   title: "NEXUS::OS — KANBAN APP",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        <StoreHydration />
+        {children}
+      </body>
     </html>
   );
 }
