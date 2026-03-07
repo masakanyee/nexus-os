@@ -34,11 +34,11 @@ export default function QuickAdd() {
       <button
         onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 50) }}
         style={{
-          width: '100%', padding: '10px 16px',
+          width: '100%', padding: '11px 16px',
           background: 'transparent',
           border: '1px dashed var(--border-dim)',
-          color: 'var(--text-muted)',
-          fontFamily: 'var(--font-mono)', fontSize: 11,
+          color: 'var(--text-mid)',
+          fontFamily: 'var(--font-mono)', fontSize: 12,
           cursor: 'pointer', textAlign: 'left', letterSpacing: '0.05em',
           transition: 'all 0.2s',
         }}
@@ -50,10 +50,10 @@ export default function QuickAdd() {
         onMouseLeave={(e) => {
           const el = e.currentTarget as HTMLElement
           el.style.borderColor = 'var(--border-dim)'
-          el.style.color = 'var(--text-muted)'
+          el.style.color = 'var(--text-mid)'
         }}
       >
-        + タスクを追加  <span style={{ opacity: 0.4 }}>[Enter]</span>
+        + タスクを追加  <span style={{ opacity: 0.5, fontSize: 10 }}>[Enter]</span>
       </button>
     )
   }
@@ -61,7 +61,7 @@ export default function QuickAdd() {
   return (
     <div
       className="bracket-box"
-      style={{ padding: '12px', background: 'var(--bg-card)', borderColor: 'var(--accent-cyan)' }}
+      style={{ padding: '14px', background: 'var(--bg-card)', borderColor: 'var(--accent-cyan)' }}
     >
       <input
         ref={inputRef}
@@ -73,7 +73,7 @@ export default function QuickAdd() {
           width: '100%', background: 'transparent', border: 'none',
           borderBottom: '1px solid var(--border-dim)',
           color: 'var(--text-bright)', fontFamily: 'var(--font-mono)',
-          fontSize: 12, padding: '4px 0 8px', marginBottom: 10, outline: 'none',
+          fontSize: 13, padding: '4px 0 10px', marginBottom: 12, outline: 'none',
         }}
       />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -82,8 +82,8 @@ export default function QuickAdd() {
           onChange={(e) => setProjectId(e.target.value)}
           style={{
             background: 'var(--bg-void)', border: '1px solid var(--border-dim)',
-            color: 'var(--text-mid)', fontFamily: 'var(--font-mono)',
-            fontSize: 10, padding: '4px 8px', cursor: 'pointer',
+            color: 'var(--text-bright)', fontFamily: 'var(--font-mono)',
+            fontSize: 11, padding: '5px 10px', cursor: 'pointer',
           }}
         >
           <option value="null">INBOX</option>
@@ -98,10 +98,10 @@ export default function QuickAdd() {
             onClick={() => setPriority(p)}
             style={{
               fontSize: 9, fontFamily: 'var(--font-display)',
-              padding: '4px 8px', cursor: 'pointer',
-              background: priority === p ? 'rgba(0,255,255,0.1)' : 'transparent',
+              padding: '5px 10px', cursor: 'pointer',
+              background: priority === p ? 'rgba(0,229,255,0.1)' : 'transparent',
               border: `1px solid ${priority === p ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
-              color: priority === p ? 'var(--accent-cyan)' : 'var(--text-muted)',
+              color: priority === p ? 'var(--accent-cyan)' : 'var(--text-mid)',
               letterSpacing: '0.05em',
             }}
           >
@@ -114,10 +114,10 @@ export default function QuickAdd() {
           style={{
             marginLeft: 'auto', fontSize: 10,
             fontFamily: 'var(--font-display)',
-            padding: '4px 14px', cursor: 'pointer',
-            background: 'rgba(0,255,255,0.1)',
+            padding: '5px 16px', cursor: 'pointer',
+            background: 'rgba(0,229,255,0.12)',
             border: '1px solid var(--accent-cyan)',
-            color: 'var(--accent-cyan)', letterSpacing: '0.08em',
+            color: 'var(--accent-cyan)', letterSpacing: '0.1em',
           }}
         >
           ADD

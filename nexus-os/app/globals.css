@@ -1,19 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
 :root {
-  --bg-void:        #020408;
-  --bg-panel:       #040c12;
-  --bg-card:        #071018;
+  --bg-void:        #020810;
+  --bg-panel:       #050e18;
+  --bg-card:        #0a1a28;
   --border-cyber:   #00ffff;
-  --border-dim:     #0a2530;
-  --accent-cyan:    #00ffff;
-  --accent-alert:   #ff3c3c;
-  --accent-warm:    #ff9500;
+  --border-dim:     #143550;
+  --accent-cyan:    #00e5ff;
+  --accent-alert:   #ff4444;
+  --accent-warm:    #ff9f0a;
   --accent-green:   #00ff88;
-  --text-bright:    #c8f0f8;
-  --text-mid:       #6a9aaa;
-  --text-muted:     #2a4a5a;
-  --glow-cyan:      0 0 12px #00ffff55, 0 0 30px #00ffff22;
+  --text-bright:    #ddf4ff;
+  --text-mid:       #8abccc;
+  --text-muted:     #507a8a;
+  --glow-cyan:      0 0 10px #00e5ff44, 0 0 24px #00e5ff18;
   --font-display:   'Orbitron', monospace;
   --font-mono:      'JetBrains Mono', monospace;
 }
@@ -39,9 +39,9 @@ body::before {
   background: repeating-linear-gradient(
     0deg,
     transparent,
-    transparent 2px,
-    rgba(0, 255, 255, 0.015) 2px,
-    rgba(0, 255, 255, 0.015) 4px
+    transparent 3px,
+    rgba(0, 229, 255, 0.007) 3px,
+    rgba(0, 229, 255, 0.007) 4px
   );
   pointer-events: none;
   z-index: 9999;
