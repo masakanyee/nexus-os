@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/store'
 import ProjectCard from '@/components/compass/ProjectCard'
 import TaskBoard from '@/components/tasks/TaskBoard'
+import ClientOnlyDashboard from '@/components/ClientOnlyDashboard'
 
 function Clock() {
   const [time, setTime] = useState('')
@@ -35,7 +36,7 @@ function Clock() {
   )
 }
 
-export default function Dashboard() {
+function Dashboard() {
   const projects = useProjectStore((s) => s.projects)
   const [selectedId, setSelectedId] = useState<string | null>(projects[0]?.id ?? null)
 
@@ -192,5 +193,13 @@ export default function Dashboard() {
         </section>
       </main>
     </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <ClientOnlyDashboard>
+      <Dashboard />
+    </ClientOnlyDashboard>
   )
 }
