@@ -22,7 +22,8 @@ interface Props {
 }
 
 export default function ProjectCard({ project, isSelected, onClick }: Props) {
-  const tasks = useTaskStore((s) => s.tasks.filter((t) => t.projectId === project.id))
+  const allTasks = useTaskStore((s) => s.tasks)
+  const tasks = allTasks.filter((t) => t.projectId === project.id)
   const doneTasks = tasks.filter((t) => t.status === 'done').length
   const stalled = stalledDays(project.lastTouched)
   const progress = milestoneProgress(project.milestones)
