@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import { Task } from '@/types'
 import { useTaskStore, useProjectStore } from '@/store'
 
@@ -11,9 +12,11 @@ const PRIORITY_COLOR: Record<Task['priority'], string> = {
 
 export default function TaskCard({ task }: { task: Task }) {
   const moveTask = useTaskStore((s) => s.moveTask)
+  const deleteTask = useTaskStore((s) => s.deleteTask)
   const projects = useProjectStore((s) => s.projects)
   const project = task.projectId ? projects.find((p) => p.id === task.projectId) : null
   const color = PRIORITY_COLOR[task.priority]
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   return (
     <div
@@ -33,13 +36,27 @@ export default function TaskCard({ task }: { task: Task }) {
         }}>
           {task.title}
         </span>
-        <span style={{
-          fontSize: 9, fontFamily: 'var(--font-display)', letterSpacing: '0.08em',
-          color, border: `1px solid ${color}55`, padding: '2px 7px',
-          whiteSpace: 'nowrap', flexShrink: 0,
-        }}>
-          {task.priority.toUpperCase()}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          <span style={{
+            fontSize: 9, fontFamily: 'var(--font-display)', letterSpacing: '0.08em',
+            color, border: `1px solid ${color}55`, padding: '2px 7px',
+          }}>
+            {task.priority.toUpperCase()}
+          </span>
+          {confirmDelete ? (
+            <>
+              <button onClick={() => deleteTask(task.id)} style={{ fontSize: 8, padding: '2px 6px', background: 'rgba(255,68,68,0.15)', border: '1px solid var(--accent-alert)', color: 'var(--accent-alert)', cursor: 'pointer', fontFamily: 'var(--font-display)' }}>DEL</button>
+              <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 8, padding: '2px 5px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
+            </>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              style={{ fontSize: 10, padding: '0 3px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-alert)' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
+            >×</button>
+          )}
+        </div>
       </div>
       {project && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 7 }}>

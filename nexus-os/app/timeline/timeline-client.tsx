@@ -1,227 +1,263 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { useProjectStore, loadStoredState, saveStoredState } from '@/store'
-import { Milestone, MilestoneSpan, Project } from '@/types'
+import { useFlowStore, loadStoredState, saveStoredState, useProjectStore } from '@/store'
+import { FlowNode } from '@/types'
 
-const DAY_PX = 8
-const LANE_HEIGHT = 170
-const AXIS_HEIGHT = 48
-const MS_HEIGHT = 130
-const SIDEBAR_W = 200
+const COLORS = ['#00e5ff', '#ff9f0a', '#ff4444', '#00ff88', '#c084fc', '#60a5fa', '#f472b6']
 
-const SPAN_DAYS: Record<MilestoneSpan, number> = {
-  monthly: 30,
-  quarterly: 91,
-  half_year: 182,
-}
+const SIZE_PRESETS = [
+  { label: 'S', w: 150, h: 80 },
+  { label: 'M', w: 210, h: 110 },
+  { label: 'L', w: 300, h: 150 },
+]
 
-const SPAN_LABEL: Record<MilestoneSpan, string> = {
-  monthly: '1M',
-  quarterly: 'Q',
-  half_year: '6M',
-}
-
-function dateMs(s: string) { return new Date(s).getTime() }
-function toDateStr(ms: number) { return new Date(ms).toISOString().split('T')[0] }
-
-// ─── Add Modal ────────────────────────────────────────────────────────────────
-function AddModal({
-  project,
-  initialDate,
-  onAdd,
-  onClose,
+// ─── Node Card ────────────────────────────────────────────────────────────────
+function NodeCard({
+  node,
+  isSelected,
+  isConnSrc,
+  isConnTarget,
+  onSelect,
+  onConnectClick,
+  onUpdate,
+  onDelete,
+  onDragStart,
+  onResizeStart,
 }: {
-  project: Project
-  initialDate: string
-  onAdd: (m: Omit<Milestone, 'id' | 'projectId'>) => void
-  onClose: () => void
+  node: FlowNode
+  isSelected: boolean
+  isConnSrc: boolean
+  isConnTarget: boolean
+  onSelect: () => void
+  onConnectClick: (e: React.MouseEvent) => void
+  onUpdate: (patch: Partial<FlowNode>) => void
+  onDelete: () => void
+  onDragStart: (e: React.MouseEvent) => void
+  onResizeStart: (e: React.MouseEvent) => void
 }) {
-  const [label, setLabel] = useState('')
-  const [targetDate, setTargetDate] = useState(initialDate)
-  const [span, setSpan] = useState<MilestoneSpan>('quarterly')
-  const [notes, setNotes] = useState('')
-  const ref = useRef<HTMLInputElement>(null)
-  useEffect(() => { ref.current?.focus() }, [])
-
-  const submit = () => {
-    if (!label.trim() || !targetDate) return
-    onAdd({ label: label.trim(), targetDate, span, completed: false, notes: notes.trim() || undefined, connections: [] })
-  }
-
-  const color = project.color
-  const canSubmit = label.trim() && targetDate
+  const [confirmDel, setConfirmDel] = useState(false)
+  const c = node.color
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(2,8,16,0.85)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      onClick={onClose}
+      onMouseDown={(e) => { if ((e.target as HTMLElement).dataset.handle !== 'resize') { onSelect(); onDragStart(e) } }}
+      style={{
+        position: 'absolute',
+        left: node.x,
+        top: node.y,
+        width: node.w,
+        height: node.h,
+        background: isConnTarget ? `${c}18` : isConnSrc ? `${c}14` : 'var(--bg-card)',
+        border: `1px solid ${isSelected || isConnSrc ? c : 'var(--border-dim)'}`,
+        boxShadow: isSelected ? `0 0 18px ${c}33` : 'none',
+        cursor: 'grab',
+        userSelect: 'none',
+        zIndex: isSelected ? 20 : 10,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '10px 12px',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      }}
     >
-      <div
-        className="bracket-box"
-        style={{ width: 380, background: 'var(--bg-card)', borderColor: color, padding: '24px' }}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) submit(); if (e.key === 'Escape') onClose() }}
-      >
-        <div style={{ fontSize: 10, fontFamily: 'var(--font-display)', color, letterSpacing: '0.15em', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, display: 'inline-block' }} />
-          {project.name} — NEW MILESTONE
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <input
-            ref={ref}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="マイルストーン名"
-            style={{ width: '100%', background: 'var(--bg-void)', border: '1px solid var(--border-dim)', color: 'var(--text-bright)', fontFamily: 'var(--font-mono)', fontSize: 12, padding: '8px 10px', outline: 'none' }}
-          />
-          <input
-            type="date"
-            value={targetDate}
-            onChange={(e) => setTargetDate(e.target.value)}
-            style={{ width: '100%', background: 'var(--bg-void)', border: '1px solid var(--border-dim)', color: 'var(--text-bright)', fontFamily: 'var(--font-mono)', fontSize: 11, padding: '8px 10px', outline: 'none', colorScheme: 'dark' }}
-          />
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['monthly', 'quarterly', 'half_year'] as MilestoneSpan[]).map((s) => (
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 5, flexShrink: 0 }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: c, boxShadow: `0 0 5px ${c}`, flexShrink: 0, marginTop: 3 }} />
+        <input
+          value={node.label}
+          onChange={(e) => onUpdate({ label: e.target.value })}
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-bright)', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', cursor: 'text', minWidth: 0 }}
+        />
+        {/* Actions */}
+        {confirmDel ? (
+          <div style={{ display: 'flex', gap: 3 }} onMouseDown={(e) => e.stopPropagation()}>
+            <button onClick={onDelete} style={{ fontSize: 8, padding: '1px 5px', background: 'rgba(255,68,68,0.15)', border: '1px solid var(--accent-alert)', color: 'var(--accent-alert)', cursor: 'pointer', fontFamily: 'var(--font-display)' }}>DEL</button>
+            <button onClick={() => setConfirmDel(false)} style={{ fontSize: 8, padding: '1px 4px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
+          </div>
+        ) : (
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => setConfirmDel(true)}
+            style={{ fontSize: 10, padding: '0 2px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-alert)' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
+          >×</button>
+        )}
+      </div>
+
+      {/* Notes */}
+      <textarea
+        value={node.notes ?? ''}
+        onChange={(e) => onUpdate({ notes: e.target.value })}
+        onMouseDown={(e) => e.stopPropagation()}
+        placeholder="メモ..."
+        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-mid)', fontFamily: 'var(--font-mono)', fontSize: 10, resize: 'none', lineHeight: 1.5, cursor: 'text' }}
+      />
+
+      {/* Bottom toolbar (visible when selected) */}
+      {isSelected && (
+        <div style={{ display: 'flex', gap: 3, marginTop: 5, flexShrink: 0, flexWrap: 'wrap', alignItems: 'center' }} onMouseDown={(e) => e.stopPropagation()}>
+          {SIZE_PRESETS.map(({ label, w, h }) => (
+            <button
+              key={label}
+              onClick={() => onUpdate({ w, h })}
+              style={{ fontSize: 8, fontFamily: 'var(--font-display)', padding: '2px 6px', background: node.w === w ? `${c}20` : 'transparent', border: `1px solid ${node.w === w ? c : 'var(--border-dim)'}`, color: node.w === w ? c : 'var(--text-muted)', cursor: 'pointer' }}
+            >
+              {label}
+            </button>
+          ))}
+          <div style={{ display: 'flex', gap: 2, marginLeft: 4 }}>
+            {COLORS.map((col) => (
               <button
-                key={s}
-                onClick={() => setSpan(s)}
-                style={{
-                  flex: 1, fontSize: 9, fontFamily: 'var(--font-display)', padding: '6px 4px',
-                  background: span === s ? `${color}20` : 'transparent',
-                  border: `1px solid ${span === s ? color : 'var(--border-dim)'}`,
-                  color: span === s ? color : 'var(--text-muted)', cursor: 'pointer', letterSpacing: '0.06em',
-                }}
-              >
-                {s === 'monthly' ? '1 MONTH' : s === 'quarterly' ? 'QUARTER' : '6 MONTHS'}
-              </button>
+                key={col}
+                onClick={() => onUpdate({ color: col })}
+                style={{ width: 12, height: 12, borderRadius: '50%', background: col, border: node.color === col ? '2px solid white' : '1px solid transparent', cursor: 'pointer', padding: 0 }}
+              />
             ))}
           </div>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="メモ（任意）"
-            rows={3}
-            style={{ width: '100%', background: 'var(--bg-void)', border: '1px solid var(--border-dim)', color: 'var(--text-mid)', fontFamily: 'var(--font-mono)', fontSize: 11, padding: '8px 10px', outline: 'none', resize: 'vertical' }}
-          />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={submit}
-              disabled={!canSubmit}
-              style={{
-                flex: 1, padding: '8px', fontSize: 10, fontFamily: 'var(--font-display)',
-                background: canSubmit ? `${color}18` : 'transparent',
-                border: `1px solid ${canSubmit ? color : 'var(--border-dim)'}`,
-                color: canSubmit ? color : 'var(--text-muted)',
-                cursor: canSubmit ? 'pointer' : 'not-allowed', letterSpacing: '0.1em',
-              }}
-            >
-              ADD MILESTONE
-            </button>
-            <button
-              onClick={onClose}
-              style={{ padding: '8px 14px', fontSize: 10, fontFamily: 'var(--font-display)', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer' }}
-            >
-              ✕
-            </button>
-          </div>
+          <button
+            onClick={onConnectClick}
+            style={{ fontSize: 8, fontFamily: 'var(--font-display)', padding: '2px 8px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 'auto' }}
+          >
+            🔗 CONNECT
+          </button>
         </div>
+      )}
+
+      {/* Resize handle */}
+      <div
+        data-handle="resize"
+        onMouseDown={(e) => { e.stopPropagation(); onResizeStart(e) }}
+        style={{ position: 'absolute', right: 0, bottom: 0, width: 14, height: 14, cursor: 'nwse-resize', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: '2px' }}
+      >
+        <svg width="8" height="8" style={{ opacity: 0.3, pointerEvents: 'none' }}>
+          <path d="M0,8 L8,0 M4,8 L8,4" stroke="var(--text-muted)" strokeWidth="1" />
+        </svg>
       </div>
     </div>
   )
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function TimelineClient() {
+export default function FlowBoardClient() {
   useEffect(() => {
     loadStoredState()
-    const unsubP = useProjectStore.subscribe(saveStoredState)
-    return () => { unsubP() }
+    const unsub = useFlowStore.subscribe(saveStoredState)
+    return () => { unsub() }
   }, [])
 
-  const projects = useProjectStore((s) => s.projects)
-  const addMilestone = useProjectStore((s) => s.addMilestone)
-  const updateMilestone = useProjectStore((s) => s.updateMilestone)
-  const deleteMilestone = useProjectStore((s) => s.deleteMilestone)
+  const nodes = useFlowStore((s) => s.nodes)
+  const connections = useFlowStore((s) => s.connections)
+  const addNode = useFlowStore((s) => s.addNode)
+  const updateNode = useFlowStore((s) => s.updateNode)
+  const deleteNode = useFlowStore((s) => s.deleteNode)
+  const addConnection = useFlowStore((s) => s.addConnection)
+  const deleteConnection = useFlowStore((s) => s.deleteConnection)
 
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [connSrc, setConnSrc] = useState<string | null>(null)
 
-  // date range
-  const today = Date.now()
-  const allMs = projects.flatMap((p) => p.milestones.map((m) => dateMs(m.targetDate)))
-  const startDate = Math.min(today, ...(allMs.length ? allMs : [today])) - 90 * 86400000
-  const endDate = Math.max(today, ...(allMs.length ? allMs : [today])) + 120 * 86400000
-  const totalW = Math.round((endDate - startDate) / 86400000) * DAY_PX
+  // drag
+  const dragRef = useRef<{ nodeId: string; startX: number; startY: number; origX: number; origY: number; type: 'move' | 'resize'; origW?: number; origH?: number } | null>(null)
 
-  const toPx = (dateStr: string) => Math.round((dateMs(dateStr) - startDate) / 86400000) * DAY_PX
-  const todayPx = Math.round((today - startDate) / 86400000) * DAY_PX
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const d = dragRef.current
+    if (!d) return
+    const dx = e.clientX - d.startX
+    const dy = e.clientY - d.startY
+    if (d.type === 'move') {
+      updateNode(d.nodeId, { x: Math.max(0, d.origX + dx), y: Math.max(0, d.origY + dy) })
+    } else {
+      updateNode(d.nodeId, { w: Math.max(120, (d.origW ?? 200) + dx), h: Math.max(60, (d.origH ?? 100) + dy) })
+    }
+  }, [updateNode])
 
-  // month labels
-  const months: { label: string; px: number }[] = []
-  const d = new Date(startDate); d.setDate(1)
-  while (d.getTime() < endDate) {
-    months.push({ label: d.toLocaleDateString('ja-JP', { year: '2-digit', month: 'short' }), px: Math.round((d.getTime() - startDate) / 86400000) * DAY_PX })
-    d.setMonth(d.getMonth() + 1)
+  const handleMouseUp = useCallback(() => { dragRef.current = null }, [])
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp) }
+  }, [handleMouseMove, handleMouseUp])
+
+  const startDrag = (e: React.MouseEvent, nodeId: string) => {
+    e.preventDefault()
+    const node = nodes.find((n) => n.id === nodeId)
+    if (!node) return
+    dragRef.current = { nodeId, startX: e.clientX, startY: e.clientY, origX: node.x, origY: node.y, type: 'move' }
   }
 
-  // state
-  const [editing, setEditing] = useState<{ pid: string; mid: string } | null>(null)
-  const [adding, setAdding] = useState<{ pid: string; date: string } | null>(null)
-  const [connectSrc, setConnectSrc] = useState<{ pid: string; mid: string } | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const startResize = (e: React.MouseEvent, nodeId: string) => {
+    e.preventDefault()
+    const node = nodes.find((n) => n.id === nodeId)
+    if (!node) return
+    dragRef.current = { nodeId, startX: e.clientX, startY: e.clientY, origX: node.x, origY: node.y, origW: node.w, origH: node.h, type: 'resize' }
+  }
 
-  const msLeft = (m: Milestone) => toPx(m.targetDate) - SPAN_DAYS[m.span] * DAY_PX
-  const msWidth = (m: Milestone) => SPAN_DAYS[m.span] * DAY_PX
+  // canvas bounds
+  const canvasW = Math.max(1400, ...nodes.map((n) => n.x + n.w + 120))
+  const canvasH = Math.max(900, ...nodes.map((n) => n.y + n.h + 120))
 
-  // connection rendering
-  const renderConnections = () => {
-    const paths: React.ReactNode[] = []
-    projects.forEach((p, pi) => {
-      p.milestones.forEach((m) => {
-        if (!m.connections?.length) return
-        const sx = msLeft(m) + msWidth(m)
-        const sy = pi * LANE_HEIGHT + LANE_HEIGHT / 2
-        m.connections.forEach((connId) => {
-          projects.forEach((p2, p2i) => {
-            const cm = p2.milestones.find((x) => x.id === connId)
-            if (!cm) return
-            const tx = msLeft(cm)
-            const ty = p2i * LANE_HEIGHT + LANE_HEIGHT / 2
-            const cx = (sx + tx) / 2
-            paths.push(
-              <path
-                key={`${m.id}-${connId}`}
-                d={`M ${sx} ${sy} C ${cx} ${sy} ${cx} ${ty} ${tx} ${ty}`}
-                fill="none"
-                stroke="rgba(0,229,255,0.45)"
-                strokeWidth={1.5}
-                strokeDasharray="5 3"
-                markerEnd="url(#arr)"
-              />
-            )
-          })
-        })
-      })
+  // SVG connections
+  const renderArrows = () =>
+    connections.map((conn) => {
+      const from = nodes.find((n) => n.id === conn.from)
+      const to = nodes.find((n) => n.id === conn.to)
+      if (!from || !to) return null
+      const x1 = from.x + from.w
+      const y1 = from.y + from.h / 2
+      const x2 = to.x
+      const y2 = to.y + to.h / 2
+      const dx = Math.max(60, Math.abs(x2 - x1) * 0.5)
+      return (
+        <g key={conn.id}>
+          <path
+            d={`M ${x1} ${y1} C ${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}`}
+            fill="none"
+            stroke="rgba(0,229,255,0.35)"
+            strokeWidth={1.5}
+            strokeDasharray="5 3"
+            markerEnd="url(#arr)"
+          />
+          {/* click to delete */}
+          <path
+            d={`M ${x1} ${y1} C ${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}`}
+            fill="none"
+            stroke="transparent"
+            strokeWidth={10}
+            style={{ cursor: 'pointer' }}
+            onClick={() => deleteConnection(conn.id)}
+          />
+        </g>
+      )
     })
-    return paths
+
+  const handleCanvasClick = () => {
+    setSelected(null)
+    setConnSrc(null)
   }
 
-  const handleLaneClick = (e: React.MouseEvent<HTMLDivElement>, pid: string) => {
-    if (connectSrc) return
-    const el = scrollRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const clickX = e.clientX - rect.left + el.scrollLeft - SIDEBAR_W
-    const clickDate = toDateStr(startDate + (clickX / DAY_PX) * 86400000)
-    setAdding({ pid, date: clickDate })
-    setEditing(null)
+  const handleNodeClick = (nodeId: string) => {
+    if (connSrc && connSrc !== nodeId) {
+      addConnection(connSrc, nodeId)
+      setConnSrc(null)
+      return
+    }
+    setSelected(nodeId === selected ? null : nodeId)
+  }
+
+  const addNewNode = () => {
+    const x = 100 + Math.random() * 200
+    const y = 100 + Math.random() * 200
+    addNode({ label: 'NEW NODE', notes: '', x, y, w: 200, h: 110, color: '#00e5ff' })
   }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-void)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <header style={{ borderBottom: '1px solid var(--border-dim)', padding: '14px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'var(--bg-void)', zIndex: 200, flexShrink: 0 }}>
+      <header style={{ borderBottom: '1px solid var(--border-dim)', padding: '14px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-void)', zIndex: 100, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <div style={{ width: 28, height: 28, border: '1px solid var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--glow-cyan)' }}>
@@ -232,259 +268,86 @@ export default function TimelineClient() {
             </span>
           </Link>
           <div style={{ display: 'flex', gap: 1 }}>
-            {[
-              { label: 'KANBAN', href: '/' },
-              { label: 'TIMELINE', href: '/timeline' },
-            ].map(({ label, href }) => {
-              const active = label === 'TIMELINE'
+            {[{ label: 'KANBAN', href: '/' }, { label: 'FLOW BOARD', href: '/timeline' }].map(({ label, href }) => {
+              const active = href === '/timeline'
               return (
-                <Link
-                  key={label}
-                  href={href}
-                  style={{
-                    textDecoration: 'none', fontSize: 9, fontFamily: 'var(--font-display)',
-                    padding: '5px 14px', letterSpacing: '0.12em',
-                    background: active ? 'rgba(0,229,255,0.1)' : 'transparent',
-                    border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
-                    color: active ? 'var(--accent-cyan)' : 'var(--text-muted)',
-                  }}
-                >
+                <Link key={label} href={href} style={{ textDecoration: 'none', fontSize: 9, fontFamily: 'var(--font-display)', padding: '5px 14px', letterSpacing: '0.12em', background: active ? 'rgba(0,229,255,0.1)' : 'transparent', border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`, color: active ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>
                   {label}
                 </Link>
               )
             })}
           </div>
         </div>
-        <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-          {projects.length} PROJECTS · {projects.flatMap((p) => p.milestones).length} MILESTONES
-          <span style={{ marginLeft: 16, color: 'var(--text-mid)', fontSize: 9 }}>— 空欄クリックで追加</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            矢印クリックで削除 · カード下部のツールバーで接続
+          </span>
+          <button
+            onClick={addNewNode}
+            style={{ fontSize: 9, fontFamily: 'var(--font-display)', padding: '6px 16px', background: 'rgba(0,229,255,0.1)', border: '1px solid var(--accent-cyan)', color: 'var(--accent-cyan)', cursor: 'pointer', letterSpacing: '0.1em' }}
+          >
+            + NEW NODE
+          </button>
         </div>
       </header>
 
-      {/* Board */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      {/* Canvas */}
+      <div
+        style={{ flex: 1, overflow: 'auto', position: 'relative' }}
+        onClick={handleCanvasClick}
+      >
+        <div
+          style={{
+            position: 'relative',
+            width: canvasW,
+            height: canvasH,
+            backgroundImage: 'radial-gradient(circle, rgba(0,229,255,0.07) 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        >
+          {/* SVG connections */}
+          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5 }}>
+            <defs>
+              <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(0,229,255,0.55)" />
+              </marker>
+            </defs>
+            <g style={{ pointerEvents: 'all' }}>
+              {renderArrows()}
+            </g>
+          </svg>
 
-        {/* Sidebar */}
-        <div style={{ width: SIDEBAR_W, flexShrink: 0, background: 'var(--bg-panel)', borderRight: '1px solid var(--border-dim)', zIndex: 10 }}>
-          <div style={{ height: AXIS_HEIGHT, borderBottom: '1px solid var(--border-dim)' }} />
-          {projects.map((p) => (
+          {/* Nodes */}
+          {nodes.map((node) => (
             <div
-              key={p.id}
-              style={{ height: LANE_HEIGHT, borderBottom: '1px solid var(--border-dim)', padding: '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 6 }}
+              key={node.id}
+              onClick={(e) => { e.stopPropagation(); handleNodeClick(node.id) }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, boxShadow: `0 0 6px ${p.color}`, flexShrink: 0 }} />
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--text-bright)', letterSpacing: '0.06em', lineHeight: 1.4 }}>{p.name}</span>
-              </div>
-              <button
-                onClick={() => setAdding({ pid: p.id, date: toDateStr(today) })}
-                style={{
-                  marginTop: 4, fontSize: 8, fontFamily: 'var(--font-display)', padding: '3px 8px',
-                  background: 'transparent', border: `1px dashed ${p.color}55`,
-                  color: `${p.color}88`, cursor: 'pointer', letterSpacing: '0.08em', alignSelf: 'flex-start',
-                }}
-                onMouseEnter={(e) => { const el = e.currentTarget; el.style.borderColor = p.color; el.style.color = p.color }}
-                onMouseLeave={(e) => { const el = e.currentTarget; el.style.borderColor = `${p.color}55`; el.style.color = `${p.color}88` }}
-              >
-                + ADD
-              </button>
+              <NodeCard
+                node={node}
+                isSelected={selected === node.id}
+                isConnSrc={connSrc === node.id}
+                isConnTarget={connSrc !== null && connSrc !== node.id}
+                onSelect={() => handleNodeClick(node.id)}
+                onConnectClick={(e) => { e.stopPropagation(); setConnSrc(node.id); setSelected(null) }}
+                onUpdate={(patch) => updateNode(node.id, patch)}
+                onDelete={() => { deleteNode(node.id); setSelected(null) }}
+                onDragStart={(e) => startDrag(e, node.id)}
+                onResizeStart={(e) => startResize(e, node.id)}
+              />
             </div>
           ))}
-        </div>
-
-        {/* Scrollable timeline */}
-        <div ref={scrollRef} style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', position: 'relative' }}>
-          <div style={{ width: Math.max(totalW, 100), position: 'relative' }}>
-
-            {/* Time axis */}
-            <div style={{ height: AXIS_HEIGHT, position: 'sticky', top: 0, background: 'var(--bg-void)', zIndex: 20, borderBottom: '1px solid var(--border-dim)' }}>
-              {months.map((m, i) => (
-                <div
-                  key={i}
-                  style={{ position: 'absolute', left: m.px, top: 0, bottom: 0, borderLeft: '1px solid var(--border-dim)', paddingLeft: 8, display: 'flex', alignItems: 'center' }}
-                >
-                  <span style={{ fontSize: 9, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{m.label}</span>
-                </div>
-              ))}
-              {/* Today marker on axis */}
-              <div style={{ position: 'absolute', left: todayPx, top: 0, bottom: 0, width: 1, background: 'rgba(0,229,255,0.5)' }}>
-                <span style={{ position: 'absolute', top: 6, left: 4, fontSize: 8, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>TODAY</span>
-              </div>
-            </div>
-
-            {/* Today vertical line across all lanes */}
-            <div style={{ position: 'absolute', left: todayPx, top: AXIS_HEIGHT, bottom: 0, width: 1, background: 'rgba(0,229,255,0.15)', pointerEvents: 'none', zIndex: 1 }} />
-
-            {/* SVG connections */}
-            <svg
-              style={{ position: 'absolute', left: 0, top: AXIS_HEIGHT, width: '100%', height: projects.length * LANE_HEIGHT, pointerEvents: 'none', zIndex: 5 }}
-            >
-              <defs>
-                <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L6,3 z" fill="rgba(0,229,255,0.6)" />
-                </marker>
-              </defs>
-              {renderConnections()}
-            </svg>
-
-            {/* Project lanes */}
-            {projects.map((project, pi) => (
-              <div
-                key={project.id}
-                onClick={(e) => handleLaneClick(e, project.id)}
-                style={{
-                  position: 'relative',
-                  height: LANE_HEIGHT,
-                  borderBottom: '1px solid var(--border-dim)',
-                  cursor: connectSrc ? 'crosshair' : 'cell',
-                }}
-              >
-                {/* Milestones */}
-                {project.milestones.map((m) => {
-                  const ml = msLeft(m)
-                  const mw = msWidth(m)
-                  const isEditing = editing?.mid === m.id
-                  const isConnSrc = connectSrc?.mid === m.id
-                  const isDeleting = deletingId === m.id
-                  const color = project.color
-
-                  return (
-                    <div
-                      key={m.id}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (connectSrc) {
-                          if (connectSrc.mid !== m.id) {
-                            const src = projects.find((p) => p.id === connectSrc.pid)?.milestones.find((x) => x.id === connectSrc.mid)
-                            if (src) {
-                              const conns = src.connections ?? []
-                              updateMilestone(connectSrc.pid, connectSrc.mid, {
-                                connections: conns.includes(m.id) ? conns.filter((id) => id !== m.id) : [...conns, m.id],
-                              })
-                            }
-                          }
-                          setConnectSrc(null)
-                          return
-                        }
-                        setEditing(isEditing ? null : { pid: project.id, mid: m.id })
-                        setDeletingId(null)
-                      }}
-                      style={{
-                        position: 'absolute',
-                        left: ml,
-                        top: (LANE_HEIGHT - MS_HEIGHT) / 2,
-                        width: mw,
-                        height: MS_HEIGHT,
-                        background: m.completed ? `${color}0d` : 'var(--bg-card)',
-                        border: `1px solid ${isEditing ? color : isConnSrc ? color : m.completed ? `${color}44` : 'var(--border-dim)'}`,
-                        boxShadow: isEditing ? `0 0 16px ${color}33` : 'none',
-                        cursor: connectSrc ? 'crosshair' : 'pointer',
-                        zIndex: isEditing ? 15 : 6,
-                        padding: '8px 10px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden',
-                        transition: 'border-color 0.15s, box-shadow 0.15s',
-                      }}
-                    >
-                      {/* Top row */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4, marginBottom: 4, flexShrink: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); updateMilestone(project.id, m.id, { completed: !m.completed }) }}
-                            style={{ width: 11, height: 11, borderRadius: '50%', background: m.completed ? color : 'transparent', border: `1px solid ${color}`, cursor: 'pointer', flexShrink: 0, padding: 0 }}
-                          />
-                          <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', letterSpacing: '0.05em', color: m.completed ? 'var(--text-muted)' : 'var(--text-bright)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: m.completed ? 'line-through' : 'none' }}>
-                            {m.label}
-                          </span>
-                        </div>
-                        {/* Delete */}
-                        {isDeleting ? (
-                          <div style={{ display: 'flex', gap: 2 }} onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => { deleteMilestone(project.id, m.id); setDeletingId(null); setEditing(null) }} style={{ fontSize: 8, padding: '1px 5px', background: 'rgba(255,68,68,0.15)', border: '1px solid var(--accent-alert)', color: 'var(--accent-alert)', cursor: 'pointer', fontFamily: 'var(--font-display)' }}>DEL</button>
-                            <button onClick={(e) => { e.stopPropagation(); setDeletingId(null) }} style={{ fontSize: 8, padding: '1px 5px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setDeletingId(m.id) }}
-                            style={{ fontSize: 9, padding: '0 3px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-alert)' }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
-                          >×</button>
-                        )}
-                      </div>
-
-                      {/* Date + span */}
-                      <div style={{ fontSize: 8, color, fontFamily: 'var(--font-mono)', marginBottom: 4, opacity: 0.8, flexShrink: 0 }}>
-                        {new Date(m.targetDate).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
-                        <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>{SPAN_LABEL[m.span]}</span>
-                      </div>
-
-                      {/* Notes */}
-                      {isEditing ? (
-                        <textarea
-                          value={m.notes ?? ''}
-                          onChange={(e) => updateMilestone(project.id, m.id, { notes: e.target.value })}
-                          onClick={(e) => e.stopPropagation()}
-                          placeholder="メモを入力..."
-                          style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-mid)', fontFamily: 'var(--font-mono)', fontSize: 10, outline: 'none', resize: 'none', lineHeight: 1.5 }}
-                        />
-                      ) : (
-                        <div style={{ flex: 1, fontSize: 10, color: m.notes ? 'var(--text-mid)' : 'var(--text-muted)', fontFamily: 'var(--font-mono)', lineHeight: 1.4, overflow: 'hidden', opacity: m.notes ? 1 : 0.45 }}>
-                          {m.notes || 'メモを追加...'}
-                        </div>
-                      )}
-
-                      {/* Span + connect buttons (editing only) */}
-                      {isEditing && (
-                        <div style={{ display: 'flex', gap: 3, marginTop: 5, flexShrink: 0, flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
-                          {(['monthly', 'quarterly', 'half_year'] as MilestoneSpan[]).map((s) => (
-                            <button
-                              key={s}
-                              onClick={() => updateMilestone(project.id, m.id, { span: s })}
-                              style={{
-                                fontSize: 8, fontFamily: 'var(--font-display)', padding: '2px 6px',
-                                background: m.span === s ? `${color}20` : 'transparent',
-                                border: `1px solid ${m.span === s ? color : 'var(--border-dim)'}`,
-                                color: m.span === s ? color : 'var(--text-muted)', cursor: 'pointer',
-                              }}
-                            >
-                              {SPAN_LABEL[s]}
-                            </button>
-                          ))}
-                          <button
-                            onClick={() => { setConnectSrc({ pid: project.id, mid: m.id }); setEditing(null) }}
-                            style={{ fontSize: 8, fontFamily: 'var(--font-display)', padding: '2px 6px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 'auto' }}
-                          >
-                            🔗
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
       {/* Connect mode banner */}
-      {connectSrc && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 500, background: 'rgba(0,229,255,0.08)', border: '1px solid var(--accent-cyan)', padding: '10px 24px', display: 'flex', gap: 16, alignItems: 'center', backdropFilter: 'blur(4px)' }}>
-          <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)', letterSpacing: '0.1em' }}>接続先マイルストーンをクリック</span>
-          <button onClick={() => setConnectSrc(null)} style={{ fontSize: 9, fontFamily: 'var(--font-display)', padding: '3px 12px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer' }}>CANCEL</button>
+      {connSrc && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 500, background: 'rgba(0,229,255,0.08)', border: '1px solid var(--accent-cyan)', padding: '10px 24px', display: 'flex', gap: 16, alignItems: 'center' }}>
+          <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)', letterSpacing: '0.1em' }}>
+            接続先ノードをクリック
+          </span>
+          <button onClick={() => setConnSrc(null)} style={{ fontSize: 9, fontFamily: 'var(--font-display)', padding: '3px 12px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer' }}>CANCEL</button>
         </div>
-      )}
-
-      {/* Add modal */}
-      {adding && (
-        <AddModal
-          project={projects.find((p) => p.id === adding.pid)!}
-          initialDate={adding.date}
-          onAdd={(m) => { addMilestone(adding.pid, m); setAdding(null) }}
-          onClose={() => setAdding(null)}
-        />
       )}
     </div>
   )

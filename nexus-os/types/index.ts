@@ -24,6 +24,23 @@ export interface Project {
   lastTouched: string
 }
 
+export interface FlowNode {
+  id: string
+  label: string
+  notes?: string
+  x: number
+  y: number
+  w: number
+  h: number
+  color: string
+}
+
+export interface FlowConnection {
+  id: string
+  from: string
+  to: string
+}
+
 export interface Task {
   id: string
   title: string

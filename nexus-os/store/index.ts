@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Project, Task, TaskStatus, Priority, Milestone } from '@/types'
+import { Project, Task, TaskStatus, Priority, Milestone, FlowNode, FlowConnection } from '@/types'
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 const now = () => new Date().toISOString()
@@ -132,7 +132,46 @@ export const useTaskStore = create<TaskState>()((set) => ({
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
 }))
 
-const STORAGE_KEYS = { projects: 'nexus-projects', tasks: 'nexus-tasks' } as const
+// ─── Flow Board Store ─────────────────────────────────────────────────────────
+const defaultFlowNodes: FlowNode[] = [
+  { id: 'fn1', label: 'メール問い合わせ', notes: '', x: 60,  y: 80,  w: 160, h: 80,  color: '#00e5ff' },
+  { id: 'fn2', label: 'LINE問い合わせ',   notes: '', x: 60,  y: 200, w: 160, h: 80,  color: '#00e5ff' },
+  { id: 'fn3', label: '問い合わせ分類・優先度判定', notes: 'GASが分類\n・優先度\n・内容\n・必要アクション', x: 300, y: 120, w: 200, h: 120, color: '#ff9f0a' },
+  { id: 'fn4', label: '対応リスト作成',   notes: 'メッセージリストに書き出し', x: 580, y: 120, w: 180, h: 100, color: '#00ff88' },
+  { id: 'fn5', label: '完了・フォロー',   notes: '対応後\nステータス更新', x: 840, y: 100, w: 180, h: 120, color: '#c084fc' },
+]
+const defaultFlowConns: FlowConnection[] = [
+  { id: 'fc1', from: 'fn1', to: 'fn3' },
+  { id: 'fc2', from: 'fn2', to: 'fn3' },
+  { id: 'fc3', from: 'fn3', to: 'fn4' },
+  { id: 'fc4', from: 'fn4', to: 'fn5' },
+]
+
+interface FlowState {
+  nodes: FlowNode[]
+  connections: FlowConnection[]
+  addNode: (n: Omit<FlowNode, 'id'>) => void
+  updateNode: (id: string, patch: Partial<FlowNode>) => void
+  deleteNode: (id: string) => void
+  addConnection: (from: string, to: string) => void
+  deleteConnection: (id: string) => void
+  setNodes: (nodes: FlowNode[]) => void
+  setConnections: (conns: FlowConnection[]) => void
+}
+
+export const useFlowStore = create<FlowState>()((set) => ({
+  nodes: defaultFlowNodes,
+  connections: defaultFlowConns,
+  setNodes: (nodes) => set({ nodes }),
+  setConnections: (connections) => set({ connections }),
+  addNode: (n) => set((s) => ({ nodes: [...s.nodes, { ...n, id: uid() }] })),
+  updateNode: (id, patch) => set((s) => ({ nodes: s.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) })),
+  deleteNode: (id) => set((s) => ({ nodes: s.nodes.filter((n) => n.id !== id), connections: s.connections.filter((c) => c.from !== id && c.to !== id) })),
+  addConnection: (from, to) => set((s) => ({ connections: [...s.connections, { id: uid(), from, to }] })),
+  deleteConnection: (id) => set((s) => ({ connections: s.connections.filter((c) => c.id !== id) })),
+}))
+
+const STORAGE_KEYS = { projects: 'nexus-projects', tasks: 'nexus-tasks', flow: 'nexus-flow' } as const
 
 /** クライアントで1回だけ localStorage から復元する。React の更新ループを起こさないよう別モジュールで呼ぶ */
 export function loadStoredState(): void {
@@ -148,6 +187,11 @@ export function loadStoredState(): void {
       const parsed = JSON.parse(rawT) as Task[]
       if (Array.isArray(parsed) && parsed.length > 0) useTaskStore.setState({ tasks: parsed })
     }
+    const rawF = localStorage.getItem(STORAGE_KEYS.flow)
+    if (rawF) {
+      const parsed = JSON.parse(rawF) as { nodes: FlowNode[]; connections: FlowConnection[] }
+      if (parsed.nodes && Array.isArray(parsed.nodes)) useFlowStore.setState({ nodes: parsed.nodes, connections: parsed.connections ?? [] })
+    }
   } catch {
     // ignore
   }
@@ -159,6 +203,8 @@ export function saveStoredState(): void {
   try {
     localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(useProjectStore.getState().projects))
     localStorage.setItem(STORAGE_KEYS.tasks, JSON.stringify(useTaskStore.getState().tasks))
+    const { nodes, connections } = useFlowStore.getState()
+    localStorage.setItem(STORAGE_KEYS.flow, JSON.stringify({ nodes, connections }))
   } catch {
     // ignore
   }
