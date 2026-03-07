@@ -52,6 +52,8 @@ export default function Error({
         }}
       >
         {error.message}
+        {'\n\n'}
+        {error.stack ?? '(no stack trace)'}
       </pre>
       {error.digest && (
         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
