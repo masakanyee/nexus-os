@@ -29,7 +29,7 @@ const PROJECT_STATUS = ['active', 'stalled', 'completed'] as const
 type ImportResult = { added: number; skipped: number; errors: string[] }
 
 const PROJECTS_TEMPLATE = `name,goal,deadline,color,status
-プロダクトローンチ,新サービスのβリリース,2025-12-31,#00e5ff,active
+プロダクトローンチ,新サービスのβリリース,2025-12-31,#E8A000,active
 採用強化,エンジニア2名採用,2025-09-30,#ff9500,active`
 
 const TASKS_TEMPLATE = `カテゴリー,タスク内容
@@ -49,7 +49,7 @@ function downloadCSV(filename: string, content: string) {
 
 // ─── スタイル ──────────────────────────────────────────────────────────────────
 const panel = (accent?: string): React.CSSProperties => ({
-  background: accent ? `${accent}08` : 'rgba(0,229,255,0.02)',
+  background: accent ? `${accent}08` : 'var(--bg-card)',
   border: `1px solid ${accent ?? 'var(--border-dim)'}`,
   padding: '20px 24px',
   marginBottom: 20,
@@ -68,7 +68,7 @@ const textarea: React.CSSProperties = {
 const modeBtn = (active: boolean): React.CSSProperties => ({
   fontSize: 11, fontFamily: 'var(--font-display)', padding: '5px 14px',
   cursor: 'pointer', letterSpacing: '0.08em', transition: 'all 0.15s',
-  background: active ? 'rgba(0,229,255,0.12)' : 'transparent',
+  background: active ? 'rgba(232,160,0,0.12)' : 'transparent',
   border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
   color: active ? 'var(--accent-cyan)' : 'var(--text-mid)',
 })
@@ -107,7 +107,7 @@ export default function ImportClient() {
         id: uid(), name,
         goal: (row['goal'] ?? row['目標'] ?? '').trim(),
         deadline,
-        color: row['color']?.trim() || '#00e5ff',
+        color: row['color']?.trim() || '#E8A000',
         status: status || 'active',
         lastTouched: new Date().toISOString(),
         milestones: [],
@@ -174,7 +174,7 @@ export default function ImportClient() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 36 }}>
         <div>
           <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 4 }}>NEXUS::OS</div>
-          <div style={{ fontSize: 20, fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--accent-cyan)', letterSpacing: '0.1em', textShadow: 'var(--glow-cyan)' }}>
+          <div style={{ fontSize: 20, fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--accent-cyan)', letterSpacing: '0.05em' }}>
             CSV IMPORT
           </div>
         </div>
@@ -220,7 +220,7 @@ export default function ImportClient() {
             style={{
               marginLeft: 'auto', fontSize: 12, fontFamily: 'var(--font-display)', padding: '8px 24px',
               cursor: projectLoading || !projectsCSV.trim() ? 'not-allowed' : 'pointer',
-              background: 'rgba(0,229,255,0.12)', border: '1px solid var(--accent-cyan)',
+              background: 'rgba(232,160,0,0.12)', border: '1px solid var(--accent-cyan)',
               color: 'var(--accent-cyan)', letterSpacing: '0.12em',
               opacity: projectLoading || !projectsCSV.trim() ? 0.4 : 1,
             }}
@@ -273,8 +273,8 @@ export default function ImportClient() {
 
 function ImportResultView({ result, label, href }: { result: ImportResult; label: string; href: string }) {
   return (
-    <div style={{ marginTop: 16, padding: '12px 16px', border: '1px solid rgba(0,255,136,0.3)', background: 'rgba(0,255,136,0.04)' }}>
-      <div style={{ fontSize: 12, color: '#00ff88', marginBottom: result.errors.length ? 8 : 0 }}>
+    <div style={{ marginTop: 16, padding: '12px 16px', border: '1px solid rgba(48,209,88,0.4)', background: 'rgba(48,209,88,0.06)', borderRadius: 6 }}>
+      <div style={{ fontSize: 12, color: 'var(--accent-green)', marginBottom: result.errors.length ? 8 : 0 }}>
         ✓ {label}: {result.added}件追加, {result.skipped}件スキップ
       </div>
       {result.errors.map((e, i) => (

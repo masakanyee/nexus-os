@@ -78,7 +78,7 @@ export default function TaskCard({ task }: { task: Task }) {
             onClick={() => moveTask(task.id, status)}
             style={{
               fontSize: 10, fontFamily: 'var(--font-display)', padding: '4px 9px', cursor: 'pointer',
-              background: task.status === status ? 'rgba(0,229,255,0.12)' : 'transparent',
+              background: task.status === status ? 'rgba(232,160,0,0.12)' : 'transparent',
               border: `1px solid ${task.status === status ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
               color: task.status === status ? 'var(--accent-cyan)' : 'var(--text-mid)',
               letterSpacing: '0.05em',

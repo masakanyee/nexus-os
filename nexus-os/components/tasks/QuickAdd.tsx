@@ -99,7 +99,7 @@ export default function QuickAdd() {
             style={{
               fontSize: 11, fontFamily: 'var(--font-display)',
               padding: '6px 11px', cursor: 'pointer',
-              background: priority === p ? 'rgba(0,229,255,0.1)' : 'transparent',
+              background: priority === p ? 'rgba(232,160,0,0.1)' : 'transparent',
               border: `1px solid ${priority === p ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
               color: priority === p ? 'var(--accent-cyan)' : 'var(--text-mid)',
               letterSpacing: '0.05em',
@@ -115,7 +115,7 @@ export default function QuickAdd() {
             marginLeft: 'auto', fontSize: 12,
             fontFamily: 'var(--font-display)',
             padding: '6px 18px', cursor: 'pointer',
-            background: 'rgba(0,229,255,0.12)',
+            background: 'rgba(232,160,0,0.12)',
             border: '1px solid var(--accent-cyan)',
             color: 'var(--accent-cyan)', letterSpacing: '0.1em',
           }}

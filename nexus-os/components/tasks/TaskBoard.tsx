@@ -38,7 +38,7 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
   const tabBtn = (active: boolean): React.CSSProperties => ({
     fontSize: 11, fontFamily: 'var(--font-display)',
     padding: '5px 14px', cursor: 'pointer', letterSpacing: '0.1em',
-    background: active ? 'rgba(0,255,255,0.08)' : 'transparent',
+    background: active ? 'rgba(232,160,0,0.08)' : 'transparent',
     border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
     color: active ? 'var(--accent-cyan)' : 'var(--text-muted)',
     boxShadow: active ? 'var(--glow-cyan)' : 'none',

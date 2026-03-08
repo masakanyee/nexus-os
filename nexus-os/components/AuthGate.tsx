@@ -165,7 +165,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
   const box: React.CSSProperties = {
     border: '1px solid var(--border-dim)', padding: '48px 56px',
-    background: 'rgba(0,229,255,0.02)', width: 380, position: 'relative',
+    background: 'var(--bg-card)', width: 380, position: 'relative', borderRadius: 12,
   }
 
   // ─── Loading / Touch ID auto-auth ─────────────────────────────────────────
@@ -214,9 +214,6 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   // ─── Login ────────────────────────────────────────────────────────────────
   return (
     <div style={overlay}>
-      {/* スキャンライン */}
-      <div style={{ position: 'fixed', inset: 0, background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,229,255,0.007) 2px, rgba(0,229,255,0.007) 4px)', pointerEvents: 'none', zIndex: 0 }} />
-
       <div style={{ ...box, zIndex: 1 }}>
         <Logo />
 
@@ -277,11 +274,11 @@ function Logo() {
   return (
     <div style={{ marginBottom: 36, textAlign: 'center' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
-        <div style={{ width: 28, height: 28, border: '1px solid var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--glow-cyan)' }}>
-          <div style={{ width: 10, height: 10, background: 'var(--accent-cyan)', boxShadow: 'var(--glow-cyan)' }} />
+        <div style={{ width: 28, height: 28, border: '2px solid var(--accent-cyan)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 10, height: 10, background: 'var(--accent-cyan)', borderRadius: 2 }} />
         </div>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900, color: 'var(--accent-cyan)', letterSpacing: '0.2em', textShadow: 'var(--glow-cyan)' }}>
-          NEXUS<span style={{ color: '#507a8a', fontWeight: 400 }}>::OS</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900, color: 'var(--accent-cyan)', letterSpacing: '0.1em' }}>
+          NEXUS<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>::OS</span>
         </span>
       </div>
       <div style={{ fontSize: 9, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.3em' }}>
@@ -295,7 +292,7 @@ function btnStyle(variant: 'cyan' | 'dim'): React.CSSProperties {
   return {
     cursor: 'pointer', fontFamily: 'var(--font-display)', letterSpacing: '0.12em',
     fontSize: 11, padding: '8px 20px', transition: 'all 0.15s',
-    background: variant === 'cyan' ? 'rgba(0,229,255,0.1)' : 'transparent',
+    background: variant === 'cyan' ? 'rgba(232,160,0,0.1)' : 'transparent',
     border: `1px solid ${variant === 'cyan' ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
     color: variant === 'cyan' ? 'var(--accent-cyan)' : 'var(--text-muted)',
   }
