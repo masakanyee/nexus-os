@@ -28,18 +28,14 @@ const PROJECT_STATUS = ['active', 'stalled', 'completed'] as const
 
 type ImportResult = { added: number; skipped: number; errors: string[] }
 
-// ─── テンプレート CSV ──────────────────────────────────────────────────────────
 const PROJECTS_TEMPLATE = `name,goal,deadline,color,status
 プロダクトローンチ,新サービスのβリリース,2025-12-31,#00e5ff,active
-採用強化,エンジニア2名採用,2025-09-30,#ff9500,active
-売上目標達成,年間売上¥50M,2025-12-31,#ff3c3c,active`
+採用強化,エンジニア2名採用,2025-09-30,#ff9500,active`
 
-const TASKS_TEMPLATE = `title,projectName,priority,status,memo
-LPのコピーライティング修正,プロダクトローンチ,high,todo,
-APIエンドポイント設計書作成,プロダクトローンチ,critical,in_progress,
-求人媒体の選定,採用強化,medium,backlog,
-既存顧客へのアップセル提案,売上目標達成,high,todo,
-競合サービス調査レポート,,low,backlog,プロジェクト未割当の場合は空欄`
+const TASKS_TEMPLATE = `カテゴリー,タスク内容
+ネガティブ処理,家賃交渉
+IT/新規事業,在庫管理アプリの構想整理
+IMPORT,AZURE 戦略実行`
 
 function downloadCSV(filename: string, content: string) {
   const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' })
@@ -51,145 +47,133 @@ function downloadCSV(filename: string, content: string) {
   URL.revokeObjectURL(url)
 }
 
+// ─── スタイル ──────────────────────────────────────────────────────────────────
+const panel = (accent?: string): React.CSSProperties => ({
+  background: accent ? `${accent}08` : 'rgba(0,229,255,0.02)',
+  border: `1px solid ${accent ?? 'var(--border-dim)'}`,
+  padding: '20px 24px',
+  marginBottom: 20,
+})
+const label: React.CSSProperties = {
+  fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)',
+  letterSpacing: '0.15em', display: 'block', marginBottom: 10,
+}
+const textarea: React.CSSProperties = {
+  width: '100%', minHeight: 150, background: 'var(--bg-void)',
+  border: '1px solid var(--border-dim)', color: 'var(--text-bright)',
+  fontFamily: 'var(--font-mono)', fontSize: 12, padding: '10px',
+  outline: 'none', resize: 'vertical', lineHeight: 1.6,
+  boxSizing: 'border-box',
+}
+const modeBtn = (active: boolean): React.CSSProperties => ({
+  fontSize: 11, fontFamily: 'var(--font-display)', padding: '5px 14px',
+  cursor: 'pointer', letterSpacing: '0.08em', transition: 'all 0.15s',
+  background: active ? 'rgba(0,229,255,0.12)' : 'transparent',
+  border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
+  color: active ? 'var(--accent-cyan)' : 'var(--text-mid)',
+})
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function ImportClient() {
   const [projectsCSV, setProjectsCSV] = useState('')
   const [tasksCSV, setTasksCSV] = useState('')
-  const [result, setResult] = useState<{ projects?: ImportResult; tasks?: ImportResult } | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState<'add' | 'replace'>('add')
+  const [projectMode, setProjectMode] = useState<'add' | 'replace'>('add')
+  const [taskMode, setTaskMode] = useState<'add' | 'replace'>('replace')
+  const [projectResult, setProjectResult] = useState<ImportResult | null>(null)
+  const [taskResult, setTaskResult] = useState<ImportResult | null>(null)
+  const [projectLoading, setProjectLoading] = useState(false)
+  const [taskLoading, setTaskLoading] = useState(false)
 
-  const handleImport = async () => {
-    setLoading(true)
-    setResult(null)
+  // ── プロジェクトのみインポート ──────────────────────────────────────────────
+  const handleImportProjects = async () => {
+    if (!projectsCSV.trim()) return
+    setProjectLoading(true)
+    setProjectResult(null)
 
-    const existingProjects = useProjectStore.getState().projects
-    const existingTasks = useTaskStore.getState().tasks
+    const existing = useProjectStore.getState().projects
+    const newProjects = projectMode === 'replace' ? [] : [...existing]
+    const result: ImportResult = { added: 0, skipped: 0, errors: [] }
 
-    let newProjects = mode === 'replace' ? [] : [...existingProjects]
-    let newTasks = mode === 'replace' ? [] : [...existingTasks]
-
-    const pResult: ImportResult = { added: 0, skipped: 0, errors: [] }
-    const tResult: ImportResult = { added: 0, skipped: 0, errors: [] }
-
-    // ── プロジェクト インポート ──
-    if (projectsCSV.trim()) {
-      const rows = parseCSV(projectsCSV)
-      for (const row of rows) {
-        const name = row['name']?.trim()
-        if (!name) { pResult.skipped++; continue }
-
-        const deadline = row['deadline']?.trim()
-        if (!deadline) { pResult.errors.push(`"${name}": deadlineが必要`); continue }
-
-        const status = row['status']?.trim() as Project['status']
-        if (status && !PROJECT_STATUS.includes(status)) {
-          pResult.errors.push(`"${name}": status は active/stalled/completed のいずれか`)
-          continue
-        }
-
-        const project: Project = {
-          id: uid(),
-          name,
-          goal: row['goal']?.trim() ?? '',
-          deadline,
-          color: row['color']?.trim() || '#00e5ff',
-          status: status || 'active',
-          lastTouched: new Date().toISOString(),
-          milestones: [],
-        }
-        newProjects.push(project)
-        pResult.added++
+    for (const row of parseCSV(projectsCSV)) {
+      const name = (row['name'] ?? row['プロジェクト名'] ?? '').trim()
+      if (!name) { result.skipped++; continue }
+      const deadline = (row['deadline'] ?? row['期限'] ?? '').trim()
+      if (!deadline) { result.errors.push(`"${name}": deadline が必要`); continue }
+      const status = row['status']?.trim() as Project['status']
+      if (status && !PROJECT_STATUS.includes(status)) {
+        result.errors.push(`"${name}": status は active/stalled/completed のいずれか`); continue
       }
+      newProjects.push({
+        id: uid(), name,
+        goal: (row['goal'] ?? row['目標'] ?? '').trim(),
+        deadline,
+        color: row['color']?.trim() || '#00e5ff',
+        status: status || 'active',
+        lastTouched: new Date().toISOString(),
+        milestones: [],
+      })
+      result.added++
     }
 
-    // ── タスク インポート ──
-    if (tasksCSV.trim()) {
-      const rows = parseCSV(tasksCSV)
-      for (const row of rows) {
-        const title = row['title']?.trim()
-        if (!title) { tResult.skipped++; continue }
-
-        const priority = row['priority']?.trim() as Task['priority']
-        if (priority && !PRIORITY_VALUES.includes(priority)) {
-          tResult.errors.push(`"${title}": priority は critical/high/medium/low のいずれか`)
-          continue
-        }
-
-        const status = row['status']?.trim() as Task['status']
-        if (status && !STATUS_VALUES.includes(status)) {
-          tResult.errors.push(`"${title}": status は backlog/todo/in_progress/done のいずれか`)
-          continue
-        }
-
-        // projectName でプロジェクトを検索
-        const projectName = row['projectName']?.trim()
-        const matchedProject = projectName
-          ? newProjects.find((p) => p.name === projectName)
-          : null
-
-        const task: Task = {
-          id: uid(),
-          title,
-          projectId: matchedProject?.id ?? null,
-          priority: priority || 'medium',
-          status: status || 'todo',
-          createdAt: new Date().toISOString(),
-          memo: row['memo']?.trim() || undefined,
-        }
-        newTasks.push(task)
-        tResult.added++
-      }
-    }
-
-    // Zustand & Supabase に保存
-    if (projectsCSV.trim()) useProjectStore.setState({ projects: newProjects })
-    if (tasksCSV.trim()) useTaskStore.setState({ tasks: newTasks })
+    useProjectStore.setState({ projects: newProjects })
     await saveToSupabase()
-
-    setResult({
-      projects: projectsCSV.trim() ? pResult : undefined,
-      tasks: tasksCSV.trim() ? tResult : undefined,
-    })
-    setLoading(false)
+    setProjectResult(result)
+    setProjectLoading(false)
   }
 
-  const s = {
-    panel: {
-      background: 'rgba(0,229,255,0.03)',
-      border: '1px solid var(--border-dim)',
-      padding: '20px',
-      marginBottom: 16,
-    } as React.CSSProperties,
-    label: {
-      fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)',
-      letterSpacing: '0.15em', display: 'block', marginBottom: 8,
-    } as React.CSSProperties,
-    textarea: {
-      width: '100%', minHeight: 160, background: 'var(--bg-void)',
-      border: '1px solid var(--border-dim)', color: 'var(--text-bright)',
-      fontFamily: 'var(--font-mono)', fontSize: 12, padding: '10px',
-      outline: 'none', resize: 'vertical' as const, lineHeight: 1.6,
-      boxSizing: 'border-box' as const,
-    } as React.CSSProperties,
-    btn: (active?: boolean) => ({
-      fontSize: 11, fontFamily: 'var(--font-display)', padding: '6px 16px',
-      cursor: 'pointer', letterSpacing: '0.1em',
-      background: active ? 'rgba(0,229,255,0.12)' : 'transparent',
-      border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
-      color: active ? 'var(--accent-cyan)' : 'var(--text-mid)',
-      transition: 'all 0.15s',
-    }) as React.CSSProperties,
+  // ── タスクのみインポート ────────────────────────────────────────────────────
+  const handleImportTasks = async () => {
+    if (!tasksCSV.trim()) return
+    setTaskLoading(true)
+    setTaskResult(null)
+
+    const allProjects = useProjectStore.getState().projects
+    const existing = useTaskStore.getState().tasks
+    const newTasks = taskMode === 'replace' ? [] : [...existing]
+    const result: ImportResult = { added: 0, skipped: 0, errors: [] }
+
+    for (const row of parseCSV(tasksCSV)) {
+      // 日本語・英語どちらの列名でも対応
+      const title = (row['title'] ?? row['タスク内容'] ?? row['タスク名'] ?? row['task'] ?? '').trim()
+      if (!title) { result.skipped++; continue }
+
+      const priority = (row['priority'] ?? row['優先度'] ?? '').trim() as Task['priority']
+      if (priority && !PRIORITY_VALUES.includes(priority)) {
+        result.errors.push(`"${title}": priority は critical/high/medium/low のいずれか`); continue
+      }
+
+      const status = (row['status'] ?? row['ステータス'] ?? '').trim() as Task['status']
+      if (status && !STATUS_VALUES.includes(status)) {
+        result.errors.push(`"${title}": status は backlog/todo/in_progress/done のいずれか`); continue
+      }
+
+      const projectName = (row['projectName'] ?? row['カテゴリー'] ?? row['プロジェクト'] ?? row['project'] ?? '').trim()
+      const matched = projectName ? allProjects.find((p) => p.name === projectName) : null
+
+      newTasks.push({
+        id: uid(), title,
+        projectId: matched?.id ?? null,
+        priority: priority || 'medium',
+        status: status || 'todo',
+        createdAt: new Date().toISOString(),
+        memo: (row['memo'] ?? row['メモ'] ?? '').trim() || undefined,
+      })
+      result.added++
+    }
+
+    useTaskStore.setState({ tasks: newTasks })
+    await saveToSupabase()
+    setTaskResult(result)
+    setTaskLoading(false)
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-void)', padding: '32px 40px', color: 'var(--text-bright)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-void)', padding: '32px 40px', color: 'var(--text-bright)', maxWidth: 860, margin: '0 auto' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 36 }}>
         <div>
-          <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 4 }}>
-            NEXUS::OS
-          </div>
+          <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 4 }}>NEXUS::OS</div>
           <div style={{ fontSize: 20, fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--accent-cyan)', letterSpacing: '0.1em', textShadow: 'var(--glow-cyan)' }}>
             CSV IMPORT
           </div>
@@ -200,114 +184,106 @@ export default function ImportClient() {
       </div>
 
       {/* テンプレートDL */}
-      <div style={s.panel}>
-        <div style={s.label}>STEP 1 — テンプレートをダウンロード</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button style={s.btn()} onClick={() => downloadCSV('projects_template.csv', PROJECTS_TEMPLATE)}>
-            ↓ projects_template.csv
-          </button>
-          <button style={s.btn()} onClick={() => downloadCSV('tasks_template.csv', TASKS_TEMPLATE)}>
-            ↓ tasks_template.csv
-          </button>
+      <div style={panel()}>
+        <div style={label}>テンプレートをダウンロード</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <button style={modeBtn(false)} onClick={() => downloadCSV('projects_template.csv', PROJECTS_TEMPLATE)}>↓ projects_template.csv</button>
+          <button style={modeBtn(false)} onClick={() => downloadCSV('tasks_template.csv', TASKS_TEMPLATE)}>↓ tasks_template.csv</button>
         </div>
-        <div style={{ marginTop: 14, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.8 }}>
-          <strong style={{ color: 'var(--text-mid)' }}>projects.csv の列：</strong>
-          &nbsp;name, goal, deadline(YYYY-MM-DD), color(#hex), status(active/stalled/completed)<br />
-          <strong style={{ color: 'var(--text-mid)' }}>tasks.csv の列：</strong>
-          &nbsp;title, projectName(プロジェクト名と完全一致), priority(critical/high/medium/low), status(backlog/todo/in_progress/done), memo
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.9 }}>
+          <strong style={{ color: 'var(--text-mid)' }}>projects.csv：</strong>name, goal, deadline(YYYY-MM-DD), color(#hex), status(active/stalled/completed)<br />
+          <strong style={{ color: 'var(--text-mid)' }}>tasks.csv：</strong>カテゴリー(or projectName), タスク内容(or title), priority(critical/high/medium/low), status(backlog/todo/in_progress/done), メモ
         </div>
       </div>
 
-      {/* CSV 貼り付け */}
-      <div style={s.panel}>
-        <div style={s.label}>STEP 2 — CSVの内容を貼り付け（両方 or 片方だけでもOK）</div>
+      {/* ═══ PROJECTS ══════════════════════════════════════════════════════════ */}
+      <div style={panel('var(--accent-cyan)')}>
+        <div style={{ ...label, color: 'var(--accent-cyan)', fontSize: 13, letterSpacing: '0.2em' }}>PROJECTS</div>
 
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ ...s.label, color: 'var(--accent-cyan)' }}>PROJECTS.CSV</div>
-          <textarea
-            style={s.textarea}
-            value={projectsCSV}
-            onChange={(e) => setProjectsCSV(e.target.value)}
-            placeholder={PROJECTS_TEMPLATE}
-            spellCheck={false}
-          />
-        </div>
+        <textarea
+          style={{ ...textarea, marginBottom: 14 }}
+          value={projectsCSV}
+          onChange={(e) => setProjectsCSV(e.target.value)}
+          placeholder={PROJECTS_TEMPLATE}
+          spellCheck={false}
+        />
 
-        <div>
-          <div style={{ ...s.label, color: '#ff9f0a' }}>TASKS.CSV</div>
-          <textarea
-            style={s.textarea}
-            value={tasksCSV}
-            onChange={(e) => setTasksCSV(e.target.value)}
-            placeholder={TASKS_TEMPLATE}
-            spellCheck={false}
-          />
-        </div>
-      </div>
-
-      {/* オプション & 実行 */}
-      <div style={s.panel}>
-        <div style={s.label}>STEP 3 — インポートモードを選択して実行</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <button style={s.btn(mode === 'add')} onClick={() => setMode('add')}>
-            追加モード（既存データを保持）
-          </button>
-          <button style={s.btn(mode === 'replace')} onClick={() => setMode('replace')}>
-            置換モード（既存データを全削除）
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button style={modeBtn(projectMode === 'add')} onClick={() => setProjectMode('add')}>+ 追加</button>
+          <button style={modeBtn(projectMode === 'replace')} onClick={() => setProjectMode('replace')}>↺ 上書き</button>
+          {projectMode === 'replace' && (
+            <span style={{ fontSize: 10, color: 'var(--accent-alert)', fontFamily: 'var(--font-display)' }}>⚠ 既存プロジェクトを全削除</span>
+          )}
+          <button
+            onClick={handleImportProjects}
+            disabled={projectLoading || !projectsCSV.trim()}
+            style={{
+              marginLeft: 'auto', fontSize: 12, fontFamily: 'var(--font-display)', padding: '8px 24px',
+              cursor: projectLoading || !projectsCSV.trim() ? 'not-allowed' : 'pointer',
+              background: 'rgba(0,229,255,0.12)', border: '1px solid var(--accent-cyan)',
+              color: 'var(--accent-cyan)', letterSpacing: '0.12em',
+              opacity: projectLoading || !projectsCSV.trim() ? 0.4 : 1,
+            }}
+          >
+            {projectLoading ? 'IMPORTING...' : 'IMPORT PROJECTS'}
           </button>
         </div>
-        {mode === 'replace' && (
-          <div style={{ fontSize: 11, color: 'var(--accent-alert)', marginBottom: 12, padding: '8px 12px', border: '1px solid rgba(255,68,68,0.3)', background: 'rgba(255,68,68,0.06)' }}>
-            ⚠ 置換モード：既存のプロジェクト・タスクがすべて削除されます
-          </div>
-        )}
-        <button
-          onClick={handleImport}
-          disabled={loading || (!projectsCSV.trim() && !tasksCSV.trim())}
-          style={{
-            fontSize: 13, fontFamily: 'var(--font-display)', padding: '10px 32px',
-            cursor: loading || (!projectsCSV.trim() && !tasksCSV.trim()) ? 'not-allowed' : 'pointer',
-            background: 'rgba(0,229,255,0.12)', border: '1px solid var(--accent-cyan)',
-            color: 'var(--accent-cyan)', letterSpacing: '0.15em',
-            opacity: loading || (!projectsCSV.trim() && !tasksCSV.trim()) ? 0.5 : 1,
-          }}
-        >
-          {loading ? 'IMPORTING...' : 'IMPORT TO SUPABASE'}
-        </button>
+
+        {projectResult && <ImportResultView result={projectResult} label="Projects" href="/" />}
       </div>
 
-      {/* 結果 */}
-      {result && (
-        <div style={{ ...s.panel, borderColor: 'var(--accent-cyan)' }}>
-          <div style={s.label}>RESULT</div>
-          {result.projects && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 12, color: '#00ff88', marginBottom: 4 }}>
-                ✓ Projects: {result.projects.added}件追加, {result.projects.skipped}件スキップ
-              </div>
-              {result.projects.errors.map((e, i) => (
-                <div key={i} style={{ fontSize: 11, color: 'var(--accent-alert)' }}>✗ {e}</div>
-              ))}
-            </div>
+      {/* ═══ TASKS ════════════════════════════════════════════════════════════ */}
+      <div style={panel('#ff9f0a')}>
+        <div style={{ ...label, color: '#ff9f0a', fontSize: 13, letterSpacing: '0.2em' }}>TASKS</div>
+
+        <textarea
+          style={{ ...textarea, marginBottom: 14 }}
+          value={tasksCSV}
+          onChange={(e) => setTasksCSV(e.target.value)}
+          placeholder={TASKS_TEMPLATE}
+          spellCheck={false}
+        />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button style={modeBtn(taskMode === 'add')} onClick={() => setTaskMode('add')}>+ 追加</button>
+          <button style={modeBtn(taskMode === 'replace')} onClick={() => setTaskMode('replace')}>↺ 上書き</button>
+          {taskMode === 'replace' && (
+            <span style={{ fontSize: 10, color: 'var(--accent-alert)', fontFamily: 'var(--font-display)' }}>⚠ 既存タスクを全削除</span>
           )}
-          {result.tasks && (
-            <div>
-              <div style={{ fontSize: 12, color: '#00ff88', marginBottom: 4 }}>
-                ✓ Tasks: {result.tasks.added}件追加, {result.tasks.skipped}件スキップ
-              </div>
-              {result.tasks.errors.map((e, i) => (
-                <div key={i} style={{ fontSize: 11, color: 'var(--accent-alert)' }}>✗ {e}</div>
-              ))}
-            </div>
-          )}
-          {((result.projects?.added ?? 0) + (result.tasks?.added ?? 0)) > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <Link href="/" style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)', textDecoration: 'none', border: '1px solid var(--accent-cyan)', padding: '6px 16px', letterSpacing: '0.1em' }}>
-                → KANBANで確認
-              </Link>
-            </div>
-          )}
+          <button
+            onClick={handleImportTasks}
+            disabled={taskLoading || !tasksCSV.trim()}
+            style={{
+              marginLeft: 'auto', fontSize: 12, fontFamily: 'var(--font-display)', padding: '8px 24px',
+              cursor: taskLoading || !tasksCSV.trim() ? 'not-allowed' : 'pointer',
+              background: 'rgba(255,159,10,0.12)', border: '1px solid #ff9f0a',
+              color: '#ff9f0a', letterSpacing: '0.12em',
+              opacity: taskLoading || !tasksCSV.trim() ? 0.4 : 1,
+            }}
+          >
+            {taskLoading ? 'IMPORTING...' : 'IMPORT TASKS'}
+          </button>
         </div>
+
+        {taskResult && <ImportResultView result={taskResult} label="Tasks" href="/" />}
+      </div>
+    </div>
+  )
+}
+
+function ImportResultView({ result, label, href }: { result: ImportResult; label: string; href: string }) {
+  return (
+    <div style={{ marginTop: 16, padding: '12px 16px', border: '1px solid rgba(0,255,136,0.3)', background: 'rgba(0,255,136,0.04)' }}>
+      <div style={{ fontSize: 12, color: '#00ff88', marginBottom: result.errors.length ? 8 : 0 }}>
+        ✓ {label}: {result.added}件追加, {result.skipped}件スキップ
+      </div>
+      {result.errors.map((e, i) => (
+        <div key={i} style={{ fontSize: 11, color: 'var(--accent-alert)' }}>✗ {e}</div>
+      ))}
+      {result.added > 0 && (
+        <Link href={href} style={{ display: 'inline-block', marginTop: 10, fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--accent-cyan)', textDecoration: 'none', border: '1px solid var(--accent-cyan)', padding: '4px 14px', letterSpacing: '0.1em' }}>
+          → KANBANで確認
+        </Link>
       )}
     </div>
   )
