@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useTaskStore, useProjectStore } from '@/store'
-import { TaskStatus } from '@/types'
+import { TaskStatus, Task } from '@/types'
 import TaskCard from './TaskCard'
 import QuickAdd from './QuickAdd'
 
@@ -12,8 +12,20 @@ const COLUMNS: { key: TaskStatus; label: string }[] = [
   { key: 'done',        label: 'DONE' },
 ]
 
+const PRIORITY_ORDER: Record<Task['priority'], number> = {
+  critical: 0, high: 1, medium: 2, low: 3,
+}
+
+function sortTasks(tasks: Task[], sort: 'priority' | 'date'): Task[] {
+  return [...tasks].sort((a, b) => {
+    if (sort === 'priority') return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+}
+
 export default function TaskBoard({ selectedProjectId }: { selectedProjectId: string | null }) {
   const [view, setView] = useState<string>('all')
+  const [sort, setSort] = useState<'priority' | 'date'>('priority')
   const tasks = useTaskStore((s) => s.tasks)
   const projects = useProjectStore((s) => s.projects)
 
@@ -23,33 +35,25 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
     return t.projectId === view
   })
 
+  const tabBtn = (active: boolean): React.CSSProperties => ({
+    fontSize: 11, fontFamily: 'var(--font-display)',
+    padding: '5px 14px', cursor: 'pointer', letterSpacing: '0.1em',
+    background: active ? 'rgba(0,255,255,0.08)' : 'transparent',
+    border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
+    color: active ? 'var(--accent-cyan)' : 'var(--text-muted)',
+    boxShadow: active ? 'var(--glow-cyan)' : 'none',
+    transition: 'all 0.15s',
+  })
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
-      {/* View switcher */}
+      {/* View + Sort bar */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{
-          fontSize: 11, color: 'var(--text-muted)',
-          fontFamily: 'var(--font-display)', marginRight: 6, letterSpacing: '0.1em',
-        }}>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-display)', marginRight: 4, letterSpacing: '0.1em' }}>
           VIEW /
         </span>
-
-        <button
-          onClick={() => setView('all')}
-          style={{
-            fontSize: 11, fontFamily: 'var(--font-display)',
-            padding: '5px 14px', cursor: 'pointer', letterSpacing: '0.1em',
-            background: view === 'all' ? 'rgba(0,255,255,0.08)' : 'transparent',
-            border: `1px solid ${view === 'all' ? 'var(--accent-cyan)' : 'var(--border-dim)'}`,
-            color: view === 'all' ? 'var(--accent-cyan)' : 'var(--text-muted)',
-            boxShadow: view === 'all' ? 'var(--glow-cyan)' : 'none',
-            transition: 'all 0.15s',
-          }}
-        >
-          ALL
-        </button>
-
+        <button onClick={() => setView('all')} style={tabBtn(view === 'all')}>ALL</button>
         {projects.map((p) => (
           <button
             key={p.id}
@@ -64,25 +68,25 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
               transition: 'all 0.15s',
             }}
           >
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: p.color, display: 'inline-block',
-            }} />
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: p.color, display: 'inline-block' }} />
             {p.name}
           </button>
         ))}
+
+        {/* Sort */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}>
+            SORT /
+          </span>
+          <button onClick={() => setSort('priority')} style={tabBtn(sort === 'priority')}>PRIORITY</button>
+          <button onClick={() => setSort('date')} style={tabBtn(sort === 'date')}>DATE</button>
+        </div>
       </div>
 
       {/* Kanban columns */}
-      <div style={{
-        flex: 1,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: 12,
-        overflow: 'hidden',
-      }}>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, overflow: 'hidden' }}>
         {COLUMNS.map((col) => {
-          const colTasks = filteredTasks.filter((t) => t.status === col.key)
+          const colTasks = sortTasks(filteredTasks.filter((t) => t.status === col.key), sort)
           return (
             <div key={col.key} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{
@@ -96,15 +100,10 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
                 }}>
                   {col.label}
                 </span>
-                <span style={{
-                  fontSize: 11, color: 'var(--text-muted)',
-                  background: 'var(--bg-card)', padding: '1px 7px',
-                  border: '1px solid var(--border-dim)',
-                }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '1px 7px', border: '1px solid var(--border-dim)' }}>
                   {colTasks.length}
                 </span>
               </div>
-
               <div style={{ flex: 1, overflowY: 'auto', paddingRight: 2 }}>
                 {colTasks.map((task) => (
                   <TaskCard key={task.id} task={task} />

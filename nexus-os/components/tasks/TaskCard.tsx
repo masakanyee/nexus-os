@@ -66,7 +66,12 @@ export default function TaskCard({ task }: { task: Task }) {
           <span style={{ fontSize: 11, color: 'var(--text-mid)' }}>{project.name}</span>
         </div>
       )}
-      <div style={{ marginTop: 10, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
+          {new Date(task.createdAt).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' })}
+        </span>
+      </div>
+      <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {(['backlog', 'todo', 'in_progress', 'done'] as const).map((status) => (
           <button
             key={status}
