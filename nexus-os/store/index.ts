@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { Project, Task, TaskStatus, Priority, Milestone, FlowNode, FlowConnection } from '@/types'
+import { supabase } from '@/lib/supabase'
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 const now = () => new Date().toISOString()
@@ -171,9 +172,42 @@ export const useFlowStore = create<FlowState>()((set) => ({
   deleteConnection: (id) => set((s) => ({ connections: s.connections.filter((c) => c.id !== id) })),
 }))
 
+// ─── Supabase persistence ──────────────────────────────────────────────────────
+
+/** Supabase からデータを読み込む（マウント時に1回） */
+export async function loadFromSupabase(): Promise<void> {
+  if (typeof window === 'undefined') return
+  const { data, error } = await supabase.from('nexus_store').select('*')
+  if (error || !data) return
+  for (const row of data) {
+    if (row.key === 'projects' && Array.isArray(row.value) && row.value.length > 0) {
+      useProjectStore.setState({ projects: row.value })
+    }
+    if (row.key === 'tasks' && Array.isArray(row.value) && row.value.length > 0) {
+      useTaskStore.setState({ tasks: row.value })
+    }
+    if (row.key === 'flow' && row.value?.nodes) {
+      useFlowStore.setState({ nodes: row.value.nodes, connections: row.value.connections ?? [] })
+    }
+  }
+}
+
+/** ストアの現在の状態を Supabase に保存 */
+export async function saveToSupabase(): Promise<void> {
+  if (typeof window === 'undefined') return
+  const projects = useProjectStore.getState().projects
+  const tasks = useTaskStore.getState().tasks
+  const { nodes, connections } = useFlowStore.getState()
+  await supabase.from('nexus_store').upsert([
+    { key: 'projects', value: projects },
+    { key: 'tasks', value: tasks },
+    { key: 'flow', value: { nodes, connections } },
+  ])
+}
+
+// ─── localStorage fallback ────────────────────────────────────────────────────
 const STORAGE_KEYS = { projects: 'nexus-projects', tasks: 'nexus-tasks', flow: 'nexus-flow' } as const
 
-/** クライアントで1回だけ localStorage から復元する。React の更新ループを起こさないよう別モジュールで呼ぶ */
 export function loadStoredState(): void {
   if (typeof window === 'undefined') return
   try {
@@ -197,7 +231,6 @@ export function loadStoredState(): void {
   }
 }
 
-/** ストア変更を localStorage に保存（サブスクライブ用） */
 export function saveStoredState(): void {
   if (typeof window === 'undefined') return
   try {

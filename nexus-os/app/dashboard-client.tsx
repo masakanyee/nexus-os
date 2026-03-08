@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useProjectStore, useTaskStore, loadStoredState, saveStoredState } from '@/store'
+import { useProjectStore, useTaskStore, loadFromSupabase, saveToSupabase, loadStoredState } from '@/store'
 import ProjectCard from '@/components/compass/ProjectCard'
 import TaskBoard from '@/components/tasks/TaskBoard'
 
@@ -248,16 +248,24 @@ function DashboardContent() {
 
 export default function DashboardClient() {
   useEffect(() => {
-    try {
-      loadStoredState()
-    } catch {
-      // ignore
+    // Supabase からロード、失敗時は localStorage にフォールバック
+    loadFromSupabase().catch(() => {
+      try { loadStoredState() } catch { /* ignore */ }
+    })
+
+    // 変更を Supabase にデバウンス保存（1.5秒後）
+    let timer: ReturnType<typeof setTimeout>
+    const debouncedSave = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => saveToSupabase(), 1500)
     }
-    const unsubP = useProjectStore.subscribe(saveStoredState)
-    const unsubT = useTaskStore.subscribe(saveStoredState)
+
+    const unsubP = useProjectStore.subscribe(debouncedSave)
+    const unsubT = useTaskStore.subscribe(debouncedSave)
     return () => {
       unsubP()
       unsubT()
+      clearTimeout(timer)
     }
   }, [])
 
