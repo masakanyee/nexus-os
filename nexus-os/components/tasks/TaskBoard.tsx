@@ -26,6 +26,7 @@ function sortTasks(tasks: Task[], sort: 'priority' | 'date'): Task[] {
 export default function TaskBoard({ selectedProjectId }: { selectedProjectId: string | null }) {
   const [view, setView] = useState<string>('all')
   const [sort, setSort] = useState<'priority' | 'date'>('priority')
+  const [doneCollapsed, setDoneCollapsed] = useState(false)
   const tasks = useTaskStore((s) => s.tasks)
   const projects = useProjectStore((s) => s.projects)
 
@@ -84,9 +85,31 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
       </div>
 
       {/* Kanban columns */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: doneCollapsed ? '1fr 1fr 1fr 32px' : 'repeat(4, 1fr)', gap: 12, overflow: 'hidden', transition: 'grid-template-columns 0.2s ease' }}>
         {COLUMNS.map((col) => {
           const colTasks = sortTasks(filteredTasks.filter((t) => t.status === col.key), sort)
+
+          // DONE collapsed: narrow vertical strip
+          if (col.key === 'done' && doneCollapsed) {
+            return (
+              <div
+                key={col.key}
+                onClick={() => setDoneCollapsed(false)}
+                title="クリックで展開"
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer', paddingTop: 4, borderTop: `2px solid var(--border-dim)`, opacity: 0.6, transition: 'opacity 0.15s' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.6' }}
+              >
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '1px 5px', border: '1px solid var(--border-dim)', borderRadius: 4 }}>
+                  {colTasks.length}
+                </span>
+                <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', letterSpacing: '0.12em', color: 'var(--text-muted)', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                  DONE
+                </span>
+              </div>
+            )
+          }
+
           return (
             <div key={col.key} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{
@@ -100,9 +123,20 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
                 }}>
                   {col.label}
                 </span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '1px 7px', border: '1px solid var(--border-dim)' }}>
-                  {colTasks.length}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '1px 7px', border: '1px solid var(--border-dim)' }}>
+                    {colTasks.length}
+                  </span>
+                  {col.key === 'done' && (
+                    <button
+                      onClick={() => setDoneCollapsed(true)}
+                      title="折りたたむ"
+                      style={{ fontSize: 11, padding: '1px 5px', background: 'transparent', border: '1px solid var(--border-dim)', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1.2 }}
+                    >
+                      ›
+                    </button>
+                  )}
+                </div>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', paddingRight: 2 }}>
                 {colTasks.map((task) => (
