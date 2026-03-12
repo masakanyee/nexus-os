@@ -4,6 +4,7 @@ import { useTaskStore, useProjectStore } from '@/store'
 import { TaskStatus, Task } from '@/types'
 import TaskCard from './TaskCard'
 import QuickAdd from './QuickAdd'
+import ChecklistView from './ChecklistView'
 
 const COLUMNS: { key: TaskStatus; label: string }[] = [
   { key: 'backlog',     label: 'BACKLOG' },
@@ -27,6 +28,7 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
   const [view, setView] = useState<string>('all')
   const [sort, setSort] = useState<'priority' | 'date'>('priority')
   const [doneCollapsed, setDoneCollapsed] = useState(false)
+  const [displayMode, setDisplayMode] = useState<'kanban' | 'list'>('kanban')
   const tasks = useTaskStore((s) => s.tasks)
   const projects = useProjectStore((s) => s.projects)
 
@@ -74,17 +76,28 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
           </button>
         ))}
 
-        {/* Sort */}
+        {/* Sort + Display mode */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}>
             SORT /
           </span>
           <button onClick={() => setSort('priority')} style={tabBtn(sort === 'priority')}>PRIORITY</button>
           <button onClick={() => setSort('date')} style={tabBtn(sort === 'date')}>DATE</button>
+
+          <span style={{ width: 1, height: 18, background: 'var(--border-dim)', margin: '0 4px' }} />
+
+          <button onClick={() => setDisplayMode('kanban')} style={tabBtn(displayMode === 'kanban')}>KANBAN</button>
+          <button onClick={() => setDisplayMode('list')} style={tabBtn(displayMode === 'list')}>LIST</button>
         </div>
       </div>
 
+      {/* List view */}
+      {displayMode === 'list' && (
+        <ChecklistView filteredTasks={filteredTasks} />
+      )}
+
       {/* Kanban columns */}
+      {displayMode === 'kanban' && (
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: doneCollapsed ? '1fr 1fr 1fr 32px' : 'repeat(4, 1fr)', gap: 12, overflow: 'hidden', transition: 'grid-template-columns 0.2s ease' }}>
         {COLUMNS.map((col) => {
           const colTasks = sortTasks(filteredTasks.filter((t) => t.status === col.key), sort)
@@ -147,11 +160,14 @@ export default function TaskBoard({ selectedProjectId }: { selectedProjectId: st
           )
         })}
       </div>
+      )}
 
-      {/* Quick Add */}
-      <div style={{ marginTop: 14 }}>
-        <QuickAdd />
-      </div>
+      {/* Quick Add (kanban only) */}
+      {displayMode === 'kanban' && (
+        <div style={{ marginTop: 14 }}>
+          <QuickAdd />
+        </div>
+      )}
     </div>
   )
 }
