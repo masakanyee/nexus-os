@@ -76,7 +76,7 @@ function CheckItem({ task }: { task: Task }) {
 
       {/* Title */}
       <span style={{
-        flex: 1, fontSize: 13, color: 'var(--text-bright)',
+        flex: 1, fontSize: 13,
         fontFamily: 'var(--font-mono)', lineHeight: 1.4,
         textDecoration: checking ? 'line-through' : 'none',
         color: checking ? 'var(--text-muted)' : 'var(--text-bright)',
