@@ -151,7 +151,7 @@ function DashboardContent() {
             </span>
           </div>
           <div style={{ display: 'flex', gap: 1 }}>
-            {[{ label: 'KANBAN', href: '/' }, { label: 'FLOW BOARD', href: '/timeline' }, { label: 'IMPORT', href: '/import' }].map(({ label, href }) => {
+            {[{ label: 'KANBAN', href: '/' }, { label: 'FLOW BOARD', href: '/timeline' }, { label: 'IMPORT', href: '/import' }, { label: 'TIME LOG', href: '/timelog' }, { label: 'SETTINGS', href: '/settings' }].map(({ label, href }) => {
               const active = label === 'KANBAN'
               return (
                 <Link key={label} href={href} style={{ textDecoration: 'none', fontSize: 11, fontFamily: 'var(--font-display)', padding: '5px 16px', letterSpacing: '0.12em', background: active ? 'rgba(232,160,0,0.1)' : 'transparent', border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-dim)'}`, color: active ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>

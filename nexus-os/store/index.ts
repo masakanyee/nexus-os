@@ -205,6 +205,43 @@ export async function saveToSupabase(): Promise<void> {
   ])
 }
 
+// ─── Timelog Settings Store ───────────────────────────────────────────────────
+export const GAS_LABELS = [
+  'ROUTINE-GENERAL', 'ROUTINE-CLOUD', 'ROUTINE-IT',
+  'CLOUD MEDIA', 'CLOUD SHOP', 'CLOUD SHOP WHOLESALE',
+  'CLOUD SHOT', 'CLOUD IMPORT', 'IT', 'OTHER',
+  'EAI・KOBE', 'ARTERA', '農業', '税務・労務など', 'VAPE', 'WASTE',
+] as const
+
+interface TimelogSettingsState {
+  gasUrl: string
+  mapping: Record<string, string | null>
+  setGasUrl: (url: string) => void
+  setMapping: (mapping: Record<string, string | null>) => void
+}
+
+export const useTimelogSettingsStore = create<TimelogSettingsState>()((set) => ({
+  gasUrl: '',
+  mapping: {},
+  setGasUrl: (gasUrl) => {
+    if (typeof window !== 'undefined') localStorage.setItem('nexus-gas-url', gasUrl)
+    set({ gasUrl })
+  },
+  setMapping: (mapping) => {
+    if (typeof window !== 'undefined') localStorage.setItem('nexus-gas-mapping', JSON.stringify(mapping))
+    set({ mapping })
+  },
+}))
+
+export function loadTimelogSettings(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const gasUrl = localStorage.getItem('nexus-gas-url') ?? ''
+    const mapping = JSON.parse(localStorage.getItem('nexus-gas-mapping') ?? '{}') as Record<string, string | null>
+    useTimelogSettingsStore.setState({ gasUrl, mapping })
+  } catch { /* ignore */ }
+}
+
 // ─── localStorage fallback ────────────────────────────────────────────────────
 const STORAGE_KEYS = { projects: 'nexus-projects', tasks: 'nexus-tasks', flow: 'nexus-flow' } as const
 
