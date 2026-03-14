@@ -18,11 +18,23 @@ async function gasRequest<T>(url: string, params: Record<string, string>): Promi
   return res.json() as Promise<T>
 }
 
-export const getLabels = (url: string) =>
-  gasRequest<string[]>(url, { action: 'getLabels' })
+function toStringArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val as string[]
+  if (val && typeof val === 'object') {
+    // { tabs: [...] } or { labels: [...] } or { data: [...] } etc.
+    const obj = val as Record<string, unknown>
+    for (const key of Object.keys(obj)) {
+      if (Array.isArray(obj[key])) return obj[key] as string[]
+    }
+  }
+  return []
+}
 
-export const getTabs = (url: string) =>
-  gasRequest<string[]>(url, { action: 'getTabs' })
+export const getLabels = async (url: string): Promise<string[]> =>
+  toStringArray(await gasRequest<unknown>(url, { action: 'getLabels' }))
+
+export const getTabs = async (url: string): Promise<string[]> =>
+  toStringArray(await gasRequest<unknown>(url, { action: 'getTabs' }))
 
 export const getTimeLog = (url: string, tab: string) =>
   gasRequest<TimelogData>(url, { action: 'getTimeLog', tab })

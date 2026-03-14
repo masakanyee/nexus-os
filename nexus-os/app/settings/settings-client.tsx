@@ -38,8 +38,13 @@ export default function SettingsClient() {
     setTestMsg('')
     try {
       const tabs = await getTabs(urlInput.trim())
-      setTestStatus('ok')
-      setTestMsg(`OK — ${tabs.length} tabs: ${tabs.slice(0, 3).join(', ')}${tabs.length > 3 ? '...' : ''}`)
+      if (tabs.length === 0) {
+        setTestStatus('error')
+        setTestMsg('接続OK、ただしタブが見つかりませんでした（レスポンス形式を確認してください）')
+      } else {
+        setTestStatus('ok')
+        setTestMsg(`OK — ${tabs.length} tabs: ${tabs.slice(0, 3).join(', ')}${tabs.length > 3 ? '...' : ''}`)
+      }
     } catch (e) {
       setTestStatus('error')
       setTestMsg(e instanceof Error ? e.message : 'Connection failed')
