@@ -47,6 +47,10 @@ export default function TimelogClient() {
   const [showRevenueInput, setShowRevenueInput] = useState(false)
   const [roiView, setRoiView] = useState<'period' | 'cumulative'>('period')
 
+  // 全タブの稼働時間（累計用）
+  const [allTabsHoursMap, setAllTabsHoursMap] = useState<Record<string, number>>({})  // projectId → 累計h
+  const [loadingCumulative, setLoadingCumulative] = useState(false)
+
   useEffect(() => {
     loadFromSupabase()
     loadTimelogSettings()
@@ -58,6 +62,25 @@ export default function TimelogClient() {
       .then((t) => { setTabs(t); if (t.length > 0) setSelectedTab(t[t.length - 1]) })
       .catch(() => setError('タブの取得に失敗しました'))
   }, [gasUrl])
+
+  // 全タブのデータをバックグラウンドで取得して累計時間マップを構築
+  useEffect(() => {
+    if (!gasUrl || tabs.length === 0) return
+    setLoadingCumulative(true)
+    Promise.all(tabs.map((tab) => getTimeLog(gasUrl, tab).catch(() => null)))
+      .then((results) => {
+        const hoursMap: Record<string, number> = {}
+        results.forEach((d) => {
+          if (!d) return
+          Object.entries(d.summary).forEach(([gasLabel, entry]) => {
+            const pid = mapping[gasLabel]
+            if (pid) hoursMap[pid] = (hoursMap[pid] ?? 0) + entry.totalHours
+          })
+        })
+        setAllTabsHoursMap(hoursMap)
+      })
+      .finally(() => setLoadingCumulative(false))
+  }, [gasUrl, tabs, mapping])
 
   useEffect(() => {
     if (!gasUrl || !selectedTab) return
@@ -100,16 +123,16 @@ export default function TimelogClient() {
     .filter((r) => r.hours > 0 || r.revenue !== null)
     .sort((a, b) => (b.rph ?? -1) - (a.rph ?? -1))
 
-  // ROI テーブル行生成（2026年累計）
+  // ROI テーブル行生成（2026年累計）: 稼働時間はGAS全タブから集計、売上はRevenueRecordから集計
   type CumulativeRow = { project: typeof projects[0]; totalRevenue: number; totalProfit: number; totalHours: number; rph: number | null; periods: number }
   const cumulativeRows: CumulativeRow[] = projects
     .filter((p) => p.status !== 'completed')
     .flatMap((p) => {
       const recs = revenueRecords.filter((r) => r.projectId === p.id)
-      if (recs.length === 0) return []
+      const totalHours = allTabsHoursMap[p.id] ?? 0
+      if (recs.length === 0 && totalHours === 0) return []
       const totalRevenue = recs.reduce((s, r) => s + r.revenue, 0)
       const totalProfit = recs.reduce((s, r) => s + r.profit, 0)
-      const totalHours = recs.reduce((s, r) => s + (r.hours ?? 0), 0)
       const rph = totalRevenue > 0 && totalHours > 0 ? Math.round(totalRevenue / totalHours) : null
       return [{ project: p, totalRevenue, totalProfit, totalHours, rph, periods: recs.length }]
     })
@@ -358,6 +381,11 @@ export default function TimelogClient() {
               {/* Cumulative ROI */}
               {roiView === 'cumulative' && (
                 <div>
+                  {loadingCumulative && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', padding: '8px 0', marginBottom: 8 }}>
+                      全期間データ集計中...
+                    </div>
+                  )}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 100px 60px', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-dim)', marginBottom: 4 }}>
                     {['PROJECT', '累計h', '累計売上', '累計利益', '平均¥/h', '期間数'].map((h) => (
                       <div key={h} style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.12em', textAlign: h === 'PROJECT' ? 'left' : 'right' }}>{h}</div>
