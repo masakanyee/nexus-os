@@ -101,19 +101,19 @@ export default function TimelogClient() {
     .sort((a, b) => (b.rph ?? -1) - (a.rph ?? -1))
 
   // ROI テーブル行生成（2026年累計）
-  const cumulativeRows = projects
+  type CumulativeRow = { project: typeof projects[0]; totalRevenue: number; totalProfit: number; totalHours: number; rph: number | null; periods: number }
+  const cumulativeRows: CumulativeRow[] = projects
     .filter((p) => p.status !== 'completed')
-    .map((p) => {
+    .flatMap((p) => {
       const recs = revenueRecords.filter((r) => r.projectId === p.id)
-      if (recs.length === 0) return null
+      if (recs.length === 0) return []
       const totalRevenue = recs.reduce((s, r) => s + r.revenue, 0)
       const totalProfit = recs.reduce((s, r) => s + r.profit, 0)
       const totalHours = recs.reduce((s, r) => s + (r.hours ?? 0), 0)
       const rph = totalRevenue > 0 && totalHours > 0 ? Math.round(totalRevenue / totalHours) : null
-      return { project: p, totalRevenue, totalProfit, totalHours, rph, periods: recs.length }
+      return [{ project: p, totalRevenue, totalProfit, totalHours, rph, periods: recs.length }]
     })
-    .filter(Boolean)
-    .sort((a, b) => ((b?.rph ?? -1) - (a?.rph ?? -1))) as NonNullable<ReturnType<typeof projects.map>>[]
+    .sort((a, b) => (b.rph ?? -1) - (a.rph ?? -1))
 
   const fmtYen = (n: number) => {
     if (n >= 100_000_000) return `¥${(n / 100_000_000).toFixed(1)}億`
@@ -365,7 +365,7 @@ export default function TimelogClient() {
                   </div>
                   {cumulativeRows.length === 0 ? (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', padding: '16px 0' }}>売上データがまだありません。「売上入力」から入力してください。</div>
-                  ) : (cumulativeRows as Array<{ project: typeof projects[0]; totalRevenue: number; totalProfit: number; totalHours: number; rph: number | null; periods: number }>).map(({ project: p, totalRevenue, totalProfit, totalHours, rph, periods }) => (
+                  ) : cumulativeRows.map(({ project: p, totalRevenue, totalProfit, totalHours, rph, periods }) => (
                     <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 100px 60px', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
