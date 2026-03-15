@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Project, Task, TaskStatus, Priority, Milestone, FlowNode, FlowConnection } from '@/types'
+import { Project, Task, TaskStatus, Priority, Milestone, FlowNode, FlowConnection, RevenueRecord } from '@/types'
 import { supabase } from '@/lib/supabase'
 
 const uid = () => Math.random().toString(36).slice(2, 10)
@@ -172,6 +172,36 @@ export const useFlowStore = create<FlowState>()((set) => ({
   deleteConnection: (id) => set((s) => ({ connections: s.connections.filter((c) => c.id !== id) })),
 }))
 
+// ─── Revenue Store ────────────────────────────────────────────────────────────
+interface RevenueState {
+  records: RevenueRecord[]
+  upsertRecord: (r: Omit<RevenueRecord, 'id' | 'createdAt'>) => void
+  deleteRecord: (id: string) => void
+  setRecords: (records: RevenueRecord[]) => void
+}
+
+export const useRevenueStore = create<RevenueState>()((set, get) => ({
+  records: [],
+  setRecords: (records) => set({ records }),
+  upsertRecord: (r) => {
+    const existing = get().records.find(
+      (rec) => rec.projectId === r.projectId && rec.period === r.period
+    )
+    if (existing) {
+      set((s) => ({
+        records: s.records.map((rec) =>
+          rec.id === existing.id ? { ...rec, ...r } : rec
+        ),
+      }))
+    } else {
+      set((s) => ({
+        records: [...s.records, { ...r, id: uid(), createdAt: now() }],
+      }))
+    }
+  },
+  deleteRecord: (id) => set((s) => ({ records: s.records.filter((r) => r.id !== id) })),
+}))
+
 // ─── Supabase persistence ──────────────────────────────────────────────────────
 
 /** Supabase からデータを読み込む（マウント時に1回） */
@@ -189,6 +219,9 @@ export async function loadFromSupabase(): Promise<void> {
     if (row.key === 'flow' && row.value?.nodes) {
       useFlowStore.setState({ nodes: row.value.nodes, connections: row.value.connections ?? [] })
     }
+    if (row.key === 'revenue' && Array.isArray(row.value)) {
+      useRevenueStore.setState({ records: row.value })
+    }
   }
 }
 
@@ -198,10 +231,12 @@ export async function saveToSupabase(): Promise<void> {
   const projects = useProjectStore.getState().projects
   const tasks = useTaskStore.getState().tasks
   const { nodes, connections } = useFlowStore.getState()
+  const { records } = useRevenueStore.getState()
   await supabase.from('nexus_store').upsert([
     { key: 'projects', value: projects },
     { key: 'tasks', value: tasks },
     { key: 'flow', value: { nodes, connections } },
+    { key: 'revenue', value: records },
   ])
 }
 

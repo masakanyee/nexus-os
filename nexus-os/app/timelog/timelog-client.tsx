@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useProjectStore, useTimelogSettingsStore, loadTimelogSettings } from '@/store'
+import { useProjectStore, useTimelogSettingsStore, useRevenueStore, loadTimelogSettings, loadFromSupabase } from '@/store'
 import { getTabs, getTimeLog, TimelogData } from '@/lib/gas'
+import RevenueInputPanel from '@/components/revenue/RevenueInputPanel'
 
 const NAV = [
   { label: 'KANBAN', href: '/' },
@@ -42,7 +43,14 @@ export default function TimelogClient() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState('')
 
-  useEffect(() => { loadTimelogSettings() }, [])
+  const revenueRecords = useRevenueStore((s) => s.records)
+  const [showRevenueInput, setShowRevenueInput] = useState(false)
+  const [roiView, setRoiView] = useState<'period' | 'cumulative'>('period')
+
+  useEffect(() => {
+    loadFromSupabase()
+    loadTimelogSettings()
+  }, [])
 
   useEffect(() => {
     if (!gasUrl) return
@@ -65,6 +73,59 @@ export default function TimelogClient() {
   const getProject = (gasLabel: string) => {
     const pid = mapping[gasLabel]
     return pid ? projects.find((p) => p.id === pid) : null
+  }
+
+  // プロジェクトIDごとの稼働時間（選択期間）
+  const hoursMapByProjectId: Record<string, number> = {}
+  if (data) {
+    Object.entries(data.summary).forEach(([gasLabel, entry]) => {
+      const pid = mapping[gasLabel]
+      if (pid) {
+        hoursMapByProjectId[pid] = (hoursMapByProjectId[pid] ?? 0) + entry.totalHours
+      }
+    })
+  }
+
+  // ROI テーブル行生成（選択期間）
+  const roiRows = projects
+    .filter((p) => p.status !== 'completed')
+    .map((p) => {
+      const rec = revenueRecords.find((r) => r.projectId === p.id && r.period === selectedTab)
+      const hours = hoursMapByProjectId[p.id] ?? 0
+      const revenue = rec?.revenue ?? null
+      const profit = rec?.profit ?? null
+      const rph = revenue !== null && hours > 0 ? Math.round(revenue / hours) : null
+      return { project: p, hours, revenue, profit, rph }
+    })
+    .filter((r) => r.hours > 0 || r.revenue !== null)
+    .sort((a, b) => (b.rph ?? -1) - (a.rph ?? -1))
+
+  // ROI テーブル行生成（2026年累計）
+  const cumulativeRows = projects
+    .filter((p) => p.status !== 'completed')
+    .map((p) => {
+      const recs = revenueRecords.filter((r) => r.projectId === p.id)
+      if (recs.length === 0) return null
+      const totalRevenue = recs.reduce((s, r) => s + r.revenue, 0)
+      const totalProfit = recs.reduce((s, r) => s + r.profit, 0)
+      const totalHours = recs.reduce((s, r) => s + (r.hours ?? 0), 0)
+      const rph = totalRevenue > 0 && totalHours > 0 ? Math.round(totalRevenue / totalHours) : null
+      return { project: p, totalRevenue, totalProfit, totalHours, rph, periods: recs.length }
+    })
+    .filter(Boolean)
+    .sort((a, b) => ((b?.rph ?? -1) - (a?.rph ?? -1))) as NonNullable<ReturnType<typeof projects.map>>[]
+
+  const fmtYen = (n: number) => {
+    if (n >= 100_000_000) return `¥${(n / 100_000_000).toFixed(1)}億`
+    if (n >= 10_000) return `¥${(n / 10_000).toFixed(1)}万`
+    return `¥${n.toLocaleString()}`
+  }
+
+  const roiColor = (rph: number | null) => {
+    if (rph === null) return 'var(--text-muted)'
+    if (rph >= 10000) return 'var(--accent-cyan)'
+    if (rph >= 5000) return 'var(--accent-warm)'
+    return 'var(--accent-alert)'
   }
 
   const handleAnalyze = async () => {
@@ -232,6 +293,94 @@ export default function TimelogClient() {
                 </div>
               </div>
             )}
+
+            {/* Revenue Input Panel */}
+            {showRevenueInput && (
+              <RevenueInputPanel
+                period={selectedTab}
+                hoursMap={hoursMapByProjectId}
+                onClose={() => setShowRevenueInput(false)}
+              />
+            )}
+
+            {/* ROI Section */}
+            <div style={{ marginBottom: 36 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 12, height: 1, background: 'var(--accent-warm)', display: 'inline-block' }} />
+                  ROI MATRIX
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {(['period', 'cumulative'] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setRoiView(v)}
+                      style={{ fontSize: 10, fontFamily: 'var(--font-display)', padding: '4px 12px', letterSpacing: '0.1em', background: roiView === v ? 'rgba(232,160,0,0.15)' : 'transparent', border: `1px solid ${roiView === v ? 'var(--accent-warm)' : 'var(--border-dim)'}`, color: roiView === v ? 'var(--accent-warm)' : 'var(--text-muted)', cursor: 'pointer' }}
+                    >
+                      {v === 'period' ? '選択期間' : '2026年累計'}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setShowRevenueInput((v) => !v)}
+                    style={{ fontSize: 10, fontFamily: 'var(--font-display)', padding: '4px 12px', letterSpacing: '0.1em', background: showRevenueInput ? 'rgba(0,229,255,0.1)' : 'transparent', border: `1px solid ${showRevenueInput ? 'var(--accent-cyan)' : 'var(--border-dim)'}`, color: showRevenueInput ? 'var(--accent-cyan)' : 'var(--text-muted)', cursor: 'pointer' }}
+                  >
+                    ＋ 売上入力
+                  </button>
+                </div>
+              </div>
+
+              {/* Period ROI */}
+              {roiView === 'period' && (
+                <div>
+                  {/* Header */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 100px', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-dim)', marginBottom: 4 }}>
+                    {['PROJECT', 'HOURS', '売上', '利益', '¥/h'].map((h) => (
+                      <div key={h} style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.12em', textAlign: h === 'PROJECT' ? 'left' : 'right' }}>{h}</div>
+                    ))}
+                  </div>
+                  {roiRows.length === 0 ? (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', padding: '16px 0' }}>この期間のデータがありません</div>
+                  ) : roiRows.map(({ project: p, hours, revenue, profit, rph }) => (
+                    <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 100px', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-bright)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                      </div>
+                      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', textAlign: 'right' }}>{hours.toFixed(1)}h</div>
+                      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: revenue !== null ? 'var(--text-bright)' : 'var(--text-muted)', textAlign: 'right' }}>{revenue !== null ? fmtYen(revenue) : '—'}</div>
+                      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: profit !== null ? (profit >= 0 ? 'var(--accent-green)' : 'var(--accent-alert)') : 'var(--text-muted)', textAlign: 'right' }}>{profit !== null ? fmtYen(profit) : '—'}</div>
+                      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: roiColor(rph), textAlign: 'right' }}>{rph !== null ? fmtYen(rph) : '—'}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Cumulative ROI */}
+              {roiView === 'cumulative' && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 100px 60px', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-dim)', marginBottom: 4 }}>
+                    {['PROJECT', '累計h', '累計売上', '累計利益', '平均¥/h', '期間数'].map((h) => (
+                      <div key={h} style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.12em', textAlign: h === 'PROJECT' ? 'left' : 'right' }}>{h}</div>
+                    ))}
+                  </div>
+                  {cumulativeRows.length === 0 ? (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', padding: '16px 0' }}>売上データがまだありません。「売上入力」から入力してください。</div>
+                  ) : (cumulativeRows as Array<{ project: typeof projects[0]; totalRevenue: number; totalProfit: number; totalHours: number; rph: number | null; periods: number }>).map(({ project: p, totalRevenue, totalProfit, totalHours, rph, periods }) => (
+                    <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 100px 60px', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-bright)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                      </div>
+                      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', textAlign: 'right' }}>{totalHours.toFixed(1)}h</div>
+                      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-bright)', textAlign: 'right' }}>{fmtYen(totalRevenue)}</div>
+                      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: totalProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-alert)', textAlign: 'right' }}>{fmtYen(totalProfit)}</div>
+                      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: roiColor(rph), textAlign: 'right' }}>{rph !== null ? fmtYen(rph) : '—'}</div>
+                      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textAlign: 'right' }}>{periods}期間</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Time Allocation */}
             <div style={{ fontSize: 11, fontFamily: 'var(--font-display)', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>

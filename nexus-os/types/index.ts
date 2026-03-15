@@ -51,3 +51,14 @@ export interface Task {
   createdAt: string
   memo?: string
 }
+
+export interface RevenueRecord {
+  id: string
+  projectId: string
+  period: string      // "0301-0315" (GAS タブ名と一致)
+  revenue: number     // 売上（円）
+  profit: number      // 利益（円）
+  hours?: number      // その期間の稼働時間（timelog から自動入力）
+  memo?: string
+  createdAt: string
+}
