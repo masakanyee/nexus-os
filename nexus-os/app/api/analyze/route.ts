@@ -43,9 +43,9 @@ ${projectLines}
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: 'OPENAI_API_KEY が設定されていません' }, { status: 500 })
+    return NextResponse.json({ error: 'GEMINI_API_KEY が設定されていません' }, { status: 500 })
   }
 
   let body: AnalyzeRequestBody
@@ -57,27 +57,28 @@ export async function POST(req: NextRequest) {
 
   const prompt = buildPrompt(body)
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-      response_format: { type: 'json_object' },
-    }),
-  })
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          responseMimeType: 'application/json',
+        },
+      }),
+    }
+  )
 
   if (!res.ok) {
     const err = await res.text()
-    return NextResponse.json({ error: `OpenAI error: ${res.status} — ${err}` }, { status: res.status })
+    return NextResponse.json({ error: `Gemini error: ${res.status} — ${err}` }, { status: res.status })
   }
 
   const data = await res.json()
-  const content = data.choices?.[0]?.message?.content ?? '{}'
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}'
 
   try {
     const parsed = JSON.parse(content)

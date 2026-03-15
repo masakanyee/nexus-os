@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useProjectStore, useTimelogSettingsStore, loadTimelogSettings, GAS_LABELS } from '@/store'
+import { useProjectStore, useTimelogSettingsStore, loadTimelogSettings, loadFromSupabase, GAS_LABELS } from '@/store'
 import { getTabs } from '@/lib/gas'
 
 const NAV = [
@@ -22,8 +22,13 @@ export default function SettingsClient() {
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [testMsg, setTestMsg] = useState('')
   const [saved, setSaved] = useState(false)
+  const [initialized, setInitialized] = useState(false)
 
-  useEffect(() => { loadTimelogSettings() }, [])
+  useEffect(() => {
+    loadFromSupabase()
+    loadTimelogSettings()
+    setInitialized(true)
+  }, [])
 
   useEffect(() => {
     setUrlInput(gasUrl)
@@ -31,6 +36,22 @@ export default function SettingsClient() {
     GAS_LABELS.forEach((l) => { m[l] = mapping[l] ?? '' })
     setLocalMapping(m)
   }, [gasUrl, mapping])
+
+  // URL が変わったら即時保存（値が変わった時だけ）
+  useEffect(() => {
+    if (!initialized) return
+    if (urlInput.trim() !== gasUrl) setGasUrl(urlInput.trim())
+  }, [urlInput]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // マッピングが変わったら即時保存（値が変わった時だけ）
+  useEffect(() => {
+    if (!initialized || Object.keys(localMapping).length === 0) return
+    const changed = GAS_LABELS.some((l) => (localMapping[l] ?? '') !== (mapping[l] ?? ''))
+    if (!changed) return
+    const m: Record<string, string | null> = {}
+    GAS_LABELS.forEach((l) => { m[l] = localMapping[l] || null })
+    setMapping(m)
+  }, [localMapping]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTest = async () => {
     if (!urlInput.trim()) return
@@ -52,10 +73,6 @@ export default function SettingsClient() {
   }
 
   const handleSave = () => {
-    setGasUrl(urlInput.trim())
-    const m: Record<string, string | null> = {}
-    GAS_LABELS.forEach((l) => { m[l] = localMapping[l] || null })
-    setMapping(m)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
