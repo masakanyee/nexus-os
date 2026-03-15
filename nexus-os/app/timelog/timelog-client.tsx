@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useProjectStore, useTimelogSettingsStore, useRevenueStore, loadTimelogSettings, loadFromSupabase } from '@/store'
+import { useProjectStore, useTimelogSettingsStore, useRevenueStore, useTimelogCacheStore, loadTimelogSettings, loadFromSupabase, saveTimelogCache } from '@/store'
 import { getTabs, getTimeLog, TimelogData } from '@/lib/gas'
 import RevenueInputPanel from '@/components/revenue/RevenueInputPanel'
 
@@ -47,8 +47,9 @@ export default function TimelogClient() {
   const [showRevenueInput, setShowRevenueInput] = useState(false)
   const [roiView, setRoiView] = useState<'period' | 'cumulative'>('period')
 
-  // 全タブの稼働時間（累計用）
-  const [allTabsHoursMap, setAllTabsHoursMap] = useState<Record<string, number>>({})  // projectId → 累計h
+  const { cache: timelogCache, setCacheEntry } = useTimelogCacheStore()
+
+  // 未キャッシュタブのロード状態
   const [loadingCumulative, setLoadingCumulative] = useState(false)
 
   useEffect(() => {
@@ -63,35 +64,50 @@ export default function TimelogClient() {
       .catch(() => setError('タブの取得に失敗しました'))
   }, [gasUrl])
 
-  // 全タブのデータをバックグラウンドで取得して累計時間マップを構築
+  // 未キャッシュのタブをバックグラウンドで取得してキャッシュに追加
   useEffect(() => {
     if (!gasUrl || tabs.length === 0) return
+    const uncachedTabs = tabs.filter((tab) => !timelogCache[tab])
+    if (uncachedTabs.length === 0) return
     setLoadingCumulative(true)
-    Promise.all(tabs.map((tab) => getTimeLog(gasUrl, tab).catch(() => null)))
-      .then((results) => {
-        const hoursMap: Record<string, number> = {}
-        results.forEach((d) => {
-          if (!d) return
-          Object.entries(d.summary).forEach(([gasLabel, entry]) => {
-            const pid = mapping[gasLabel]
-            if (pid) hoursMap[pid] = (hoursMap[pid] ?? 0) + entry.totalHours
-          })
-        })
-        setAllTabsHoursMap(hoursMap)
-      })
+    Promise.all(
+      uncachedTabs.map((tab) =>
+        getTimeLog(gasUrl, tab)
+          .then((d) => { setCacheEntry(tab, d); return d })
+          .catch(() => null)
+      )
+    )
+      .then(() => saveTimelogCache())
       .finally(() => setLoadingCumulative(false))
-  }, [gasUrl, tabs, mapping])
+  }, [gasUrl, tabs])
 
   useEffect(() => {
     if (!gasUrl || !selectedTab) return
+    // キャッシュがあれば即表示（最新タブ以外はキャッシュ優先）
+    const isLatestTab = tabs.length > 0 && selectedTab === tabs[tabs.length - 1]
+    if (!isLatestTab && timelogCache[selectedTab]) {
+      setData(timelogCache[selectedTab])
+      setLoading(false)
+      setError('')
+      setAnalysis(null)
+      return
+    }
     setLoading(true)
     setError('')
     setData(null)
     setAnalysis(null)
     getTimeLog(gasUrl, selectedTab)
-      .then((d) => { setData(d); setLoading(false) })
+      .then((d) => {
+        setData(d)
+        setLoading(false)
+        // キャッシュに保存（最新タブ以外は確定データなので保存）
+        if (!isLatestTab) {
+          setCacheEntry(selectedTab, d)
+          saveTimelogCache()
+        }
+      })
       .catch(() => { setError('データの取得に失敗しました'); setLoading(false) })
-  }, [gasUrl, selectedTab])
+  }, [gasUrl, selectedTab, tabs])
 
   const getProject = (gasLabel: string) => {
     const pid = mapping[gasLabel]
@@ -123,7 +139,18 @@ export default function TimelogClient() {
     .filter((r) => r.hours > 0 || r.revenue !== null)
     .sort((a, b) => (b.rph ?? -1) - (a.rph ?? -1))
 
-  // ROI テーブル行生成（2026年累計）: 稼働時間はGAS全タブから集計、売上はRevenueRecordから集計
+  // キャッシュから全タブの稼働時間を集計
+  const allTabsHoursMap: Record<string, number> = {}
+  tabs.forEach((tab) => {
+    const d = timelogCache[tab]
+    if (!d) return
+    Object.entries(d.summary).forEach(([gasLabel, entry]) => {
+      const pid = mapping[gasLabel]
+      if (pid) allTabsHoursMap[pid] = (allTabsHoursMap[pid] ?? 0) + entry.totalHours
+    })
+  })
+
+  // ROI テーブル行生成（2026年累計）: 稼働時間はキャッシュ全タブから集計、売上はRevenueRecordから集計
   type CumulativeRow = { project: typeof projects[0]; totalRevenue: number; totalProfit: number; totalHours: number; rph: number | null; periods: number }
   const cumulativeRows: CumulativeRow[] = projects
     .filter((p) => p.status !== 'completed')
@@ -160,7 +187,12 @@ export default function TimelogClient() {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tab: data.tab, totalHours: data.totalHours, summary: data.summary }),
+        body: JSON.stringify({
+          tab: data.tab,
+          totalHours: data.totalHours,
+          summary: data.summary,
+          records: data.records ?? [],
+        }),
       })
       if (!res.ok) {
         const err = await res.json()

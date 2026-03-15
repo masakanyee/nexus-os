@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { Project, Task, TaskStatus, Priority, Milestone, FlowNode, FlowConnection, RevenueRecord } from '@/types'
+import { TimelogData } from '@/lib/gas'
 import { supabase } from '@/lib/supabase'
 
 const uid = () => Math.random().toString(36).slice(2, 10)
@@ -222,6 +223,9 @@ export async function loadFromSupabase(): Promise<void> {
     if (row.key === 'revenue' && Array.isArray(row.value)) {
       useRevenueStore.setState({ records: row.value })
     }
+    if (row.key === 'timelog_cache' && row.value && typeof row.value === 'object' && !Array.isArray(row.value)) {
+      useTimelogCacheStore.setState({ cache: row.value as Record<string, TimelogData> })
+    }
   }
 }
 
@@ -238,6 +242,28 @@ export async function saveToSupabase(): Promise<void> {
     { key: 'flow', value: { nodes, connections } },
     { key: 'revenue', value: records },
   ])
+}
+
+// ─── Timelog Cache Store ──────────────────────────────────────────────────────
+// GASから取得したタブデータをSupabaseにキャッシュ（過去期間は不変なので再取得不要）
+interface TimelogCacheState {
+  cache: Record<string, TimelogData>  // tabName → TimelogData
+  setCache: (cache: Record<string, TimelogData>) => void
+  setCacheEntry: (tab: string, data: TimelogData) => void
+}
+
+export const useTimelogCacheStore = create<TimelogCacheState>()((set) => ({
+  cache: {},
+  setCache: (cache) => set({ cache }),
+  setCacheEntry: (tab, data) =>
+    set((s) => ({ cache: { ...s.cache, [tab]: data } })),
+}))
+
+/** タイムログキャッシュをSupabaseに保存 */
+export async function saveTimelogCache(): Promise<void> {
+  if (typeof window === 'undefined') return
+  const { cache } = useTimelogCacheStore.getState()
+  await supabase.from('nexus_store').upsert([{ key: 'timelog_cache', value: cache }])
 }
 
 // ─── Timelog Settings Store ───────────────────────────────────────────────────
